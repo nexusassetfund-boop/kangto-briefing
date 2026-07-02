@@ -445,24 +445,14 @@ async def main():
     # 6) 출력
     now_str = dt.datetime.now(tz=KST).isoformat(timespec="seconds")
     results.sort(key=lambda x: (-(x.get("stage") or 0), -x.get("confidence", 0)))
-    # 프론트에 필요한 필드만 추려서 용량 절감
-    slim = []
-    for r in results:
-        slim.append({k: r.get(k) for k in (
-            "ticker", "name", "sector", "stage", "stage_label", "confidence",
-            "rs_rank", "rs_momentum", "rs_new_high", "current_price", "change_pct",
-            "days_in_stage", "signals", "vcp_detected", "contractions", "vol_drying",
-            "near_high", "volume_surge_ratio", "gap_up", "climax_warning",
-            "rise_from_low_pct", "range_contraction_pct", "ma_aligned", "mtt_pass",
-            "suggested_stop_pct", "position_size_pct",
-        )})
 
+    # 상세 모달이 MA/MTT 필드까지 쓰므로 전체 필드를 그대로 내보낸다
     _save_json(SCAN_PATH, {
         "scan_time": now_str,
         "universe_size": len(scan_targets),
         "scanned": len(results),
         "kospi": kospi,
-        "results": slim,
+        "results": results,
     })
     _save_json(TRACKING_PATH, {
         "updated": now_str,
