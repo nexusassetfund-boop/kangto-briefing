@@ -157,37 +157,20 @@ def _compute_rs_sync() -> tuple[dict, dict, dict]:
     return ticker_map, sector_map, period_returns
 
 
-async def _compute_rs_via_ohlcv(tickers: list[str]) -> dict:
-    """pykrx 실패 시 KIS OHLCV로 다중기간 수익률 계산 (main.py에서 이식)"""
-    sem = asyncio.Semaphore(10)
-
-    async def _fetch_one(ticker: str):
-        async with sem:
-            try:
-                df = await fetch_ohlcv(ticker, days=300)
-                if df.empty or len(df) < 63:
-                    return None
-                closes = df["close"]
-                cur = float(closes.iloc[-1])
-                rets = {}
-                for label, days, _w in RS_PERIODS:
-                    if len(closes) >= days:
-                        old = float(closes.iloc[-days])
-                        if old > 0:
-                            rets[label] = (cur / old - 1) * 100
-                return (ticker, rets) if rets else None
-            except Exception:
-                return None
-
-    done = await asyncio.gather(*[_fetch_one(t) for t in tickers])
+def _rs_from_ohlcv_map(ohlcv_map: dict) -> dict:
+    """이미 조회한 OHLCV로 다중기간 수익률 계산 — 추가 API 호출 없음"""
     period_returns: dict = {}
-    for item in done:
-        if item is None:
+    for ticker, df in ohlcv_map.items():
+        if df is None or df.empty or len(df) < 63:
             continue
-        ticker, rets = item
-        for label, ret_val in rets.items():
-            period_returns.setdefault(label, {})[ticker] = ret_val
-    logger.info("KIS OHLCV RS fallback: %d 종목", len([x for x in done if x]))
+        closes = df["close"]
+        cur = float(closes.iloc[-1])
+        for label, days, _w in RS_PERIODS:
+            if len(closes) >= days:
+                old = float(closes.iloc[-days])
+                if old > 0:
+                    period_returns.setdefault(label, {})[ticker] = (cur / old - 1) * 100
+    logger.info("OHLCV 기반 RS fallback: %d 종목", len(ohlcv_map))
     return period_returns
 
 
@@ -381,56 +364,67 @@ async def main():
         sys.exit(1)
     logger.info("스캔 대상: %d 종목", len(scan_targets))
 
-    # 2) RS 계산
+    # 2) 시세 일괄 조회 — 종목당 1회만 조회해서 RS와 스테이지 분석에 재사용
+    #    (KIS 호출량을 절반으로 줄여 rate limit 차단 방지)
+    sem = asyncio.Semaphore(8)
+
+    async def _fetch_one(ticker: str):
+        async with sem:
+            try:
+                df = await fetch_ohlcv(ticker, days=400)
+                return ticker, (df if not df.empty else None)
+            except Exception as e:
+                logger.warning("시세 조회 실패 %s: %s", ticker, e)
+                return ticker, None
+
+    fetched = await asyncio.gather(*[_fetch_one(t) for t, _ in scan_targets])
+    ohlcv_map = {t: df for t, df in fetched if df is not None}
+    logger.info("시세 조회 완료: %d/%d 종목", len(ohlcv_map), len(scan_targets))
+
+    # 3) RS 계산 — pykrx 일괄 등락률 우선, 실패 시 조회해둔 OHLCV 재사용
     loop = asyncio.get_event_loop()
     tmap, sector_map, period_returns = await loop.run_in_executor(None, _compute_rs_sync)
     ticker_map.update({k: v for k, v in tmap.items() if v})
     if not period_returns:
-        period_returns = await _compute_rs_via_ohlcv([t for t, _ in scan_targets])
+        period_returns = _rs_from_ohlcv_map(ohlcv_map)
     rs_map = _composite_rs(period_returns)
     logger.info("RS 계산 완료: %d 종목", len(rs_map))
 
     # RS 히스토리 (실행 간 유지 — 모멘텀 계산용, 스캔 대상만 저장)
     rs_history = state.get("rs_history", [])
 
-    # 3) 장중 실시간 가격
+    # 4) 장중 실시간 가격 (성공한 종목만)
     realtime: dict = {}
-    if is_market_hours():
+    if is_market_hours() and ohlcv_map:
         try:
-            realtime = await fetch_realtime_prices_batch(cfg, [t for t, _ in scan_targets])
+            realtime = await fetch_realtime_prices_batch(cfg, list(ohlcv_map.keys()))
         except Exception as e:
             logger.warning("실시간 조회 실패 (스캔은 계속): %s", e)
 
-    # 4) 스테이지 분석
-    sem = asyncio.Semaphore(15)
-
-    async def _analyze_one(ticker: str, name: str):
-        async with sem:
-            try:
-                df = await fetch_ohlcv(ticker, days=400)
-                if df.empty:
-                    return None
-                rt = realtime.get(ticker)
-                if rt:
-                    df = _append_virtual_candle(df, rt)
-                rs = rs_map.get(ticker, 50.0) if rs_map else 80.0
-                momentum, new_high = _rs_momentum(rs_history, ticker, rs)
-                result = analyze_stock(ticker, ticker_map.get(ticker, name), df, rs, params,
-                                       rs_momentum=momentum, rs_new_high=new_high)
-                result.sector = sector_map.get(ticker, "")
-                out = _sanitize(result.to_dict())
-                if len(df) >= 2:
-                    prev = df.iloc[-2]["close"]
-                    out["change_pct"] = round((float(df.iloc[-1]["close"]) / float(prev) - 1) * 100, 2) if prev else 0.0
-                else:
-                    out["change_pct"] = 0.0
-                return out
-            except Exception as e:
-                logger.warning("스캔 실패 %s: %s", ticker, e)
-                return None
-
-    done = await asyncio.gather(*[_analyze_one(t, n) for t, n in scan_targets])
-    results = [r for r in done if r is not None]
+    # 5) 스테이지 분석 — 조회해둔 OHLCV 사용 (추가 API 호출 없음)
+    results = []
+    for ticker, name in scan_targets:
+        df = ohlcv_map.get(ticker)
+        if df is None:
+            continue
+        try:
+            rt = realtime.get(ticker)
+            if rt:
+                df = _append_virtual_candle(df, rt)
+            rs = rs_map.get(ticker, 50.0) if rs_map else 80.0
+            momentum, new_high = _rs_momentum(rs_history, ticker, rs)
+            result = analyze_stock(ticker, ticker_map.get(ticker, name), df, rs, params,
+                                   rs_momentum=momentum, rs_new_high=new_high)
+            result.sector = sector_map.get(ticker, "")
+            out = _sanitize(result.to_dict())
+            if len(df) >= 2:
+                prev = df.iloc[-2]["close"]
+                out["change_pct"] = round((float(df.iloc[-1]["close"]) / float(prev) - 1) * 100, 2) if prev else 0.0
+            else:
+                out["change_pct"] = 0.0
+            results.append(out)
+        except Exception as e:
+            logger.warning("분석 실패 %s: %s", ticker, e)
     logger.info("스캔 완료: %d/%d 종목", len(results), len(scan_targets))
     if len(results) < len(scan_targets) * 0.3:
         logger.error("성공률 30%% 미만 — 데이터 소스 장애로 판단, 결과를 저장하지 않고 종료")

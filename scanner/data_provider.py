@@ -48,6 +48,27 @@ _kis_token_lock: asyncio.Lock | None = None  # 이벤트 루프 생성 후 초�
 _KIS_TOKEN_FAIL_COOLDOWN = 65
 
 
+# ── KIS 전역 속도 제한 (초당 20건 한도 → 여유 있게 12건/초) ──
+class _RateLimiter:
+    def __init__(self, per_second: float):
+        self.interval = 1.0 / per_second
+        self._next_at = 0.0
+        self._lock: asyncio.Lock | None = None
+
+    async def wait(self):
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        async with self._lock:
+            now = asyncio.get_event_loop().time()
+            if now < self._next_at:
+                await asyncio.sleep(self._next_at - now)
+                now = self._next_at
+            self._next_at = now + self.interval
+
+
+_kis_rate = _RateLimiter(12)
+
+
 def _get_token_lock() -> asyncio.Lock:
     """이벤트 루프 안에서 Lock을 지연 생성 (동시 토큰 발급 방지)"""
     global _kis_token_lock
@@ -170,6 +191,7 @@ async def _fetch_ohlcv_kis(ticker: str, start: str, end: str) -> pd.DataFrame:
                 "FID_ORG_ADJ_PRC": "0",
             }
             try:
+                await _kis_rate.wait()
                 resp = await client.get(
                     f"{base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
                     headers=headers, params=params,
@@ -253,14 +275,33 @@ def _fetch_ohlcv_fdr(ticker: str, start: str, end: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# 소스별 서킷 브레이커: 연속 실패가 임계치를 넘으면 해당 소스를 건너뛴다.
+# 죽은 소스에 종목마다 15~20초 타임아웃을 반복 지불하는 것을 방지.
+_src_consec_fail = {"pykrx": 0, "fdr": 0}
+_SRC_FAIL_LIMIT = 12
+
+
+def _src_alive(name: str) -> bool:
+    return _src_consec_fail[name] < _SRC_FAIL_LIMIT
+
+
+def _src_report(name: str, ok: bool):
+    if ok:
+        _src_consec_fail[name] = 0
+    else:
+        _src_consec_fail[name] += 1
+        if _src_consec_fail[name] == _SRC_FAIL_LIMIT:
+            logger.warning("%s 연속 %d회 실패 — 이번 실행에서는 건너뜀", name, _SRC_FAIL_LIMIT)
+
+
 async def fetch_ohlcv(ticker: str, days: int = 400) -> pd.DataFrame:
-    """비동기 OHLCV 조회: KIS → pykrx (15s timeout) → FDR fallback"""
+    """비동기 OHLCV 조회: KIS → pykrx (20s timeout) → FDR fallback (서킷 브레이커 적용)"""
     end = dt.date.today()
     start = end - dt.timedelta(days=days)
     end_str = end.strftime("%Y%m%d")
     start_str = start.strftime("%Y%m%d")
 
-    # 1) KIS API (비동기, 빠름)
+    # 1) KIS API (비동기, 빠름) — 토큰 실패 시 내부 쿨다운이 폭주 방지
     try:
         df = await _fetch_ohlcv_kis(ticker, start_str, end_str)
         if not df.empty and len(df) > 50:
@@ -268,31 +309,43 @@ async def fetch_ohlcv(ticker: str, days: int = 400) -> pd.DataFrame:
     except Exception as e:
         logger.debug("KIS OHLCV fallthrough for %s: %s", ticker, e)
 
-    # 2) pykrx fallback (동기) — 20초 timeout
     loop = asyncio.get_event_loop()
-    try:
-        df = await asyncio.wait_for(
-            loop.run_in_executor(None, _fetch_ohlcv_sync, ticker, start_str, end_str),
-            timeout=20.0,
-        )
-        if not df.empty and len(df) > 50:
-            return df
-    except asyncio.TimeoutError:
-        logger.warning("pykrx OHLCV timeout (20s) for %s — FDR fallback", ticker)
-    except Exception as e:
-        logger.debug("pykrx OHLCV failed for %s: %s", ticker, e)
+
+    # 2) pykrx fallback (동기) — 20초 timeout
+    if _src_alive("pykrx"):
+        try:
+            df = await asyncio.wait_for(
+                loop.run_in_executor(None, _fetch_ohlcv_sync, ticker, start_str, end_str),
+                timeout=20.0,
+            )
+            if not df.empty and len(df) > 50:
+                _src_report("pykrx", True)
+                return df
+            _src_report("pykrx", False)
+        except asyncio.TimeoutError:
+            _src_report("pykrx", False)
+            logger.warning("pykrx OHLCV timeout (20s) for %s — FDR fallback", ticker)
+        except Exception as e:
+            _src_report("pykrx", False)
+            logger.debug("pykrx OHLCV failed for %s: %s", ticker, e)
 
     # 3) FDR fallback
-    try:
-        df = await asyncio.wait_for(
-            loop.run_in_executor(None, _fetch_ohlcv_fdr, ticker, start_str, end_str),
-            timeout=15.0,
-        )
-        return df
-    except asyncio.TimeoutError:
-        logger.warning("FDR OHLCV timeout (15s) for %s", ticker)
-    except Exception as e:
-        logger.debug("FDR OHLCV failed for %s: %s", ticker, e)
+    if _src_alive("fdr"):
+        try:
+            df = await asyncio.wait_for(
+                loop.run_in_executor(None, _fetch_ohlcv_fdr, ticker, start_str, end_str),
+                timeout=15.0,
+            )
+            if not df.empty:
+                _src_report("fdr", True)
+                return df
+            _src_report("fdr", False)
+        except asyncio.TimeoutError:
+            _src_report("fdr", False)
+            logger.warning("FDR OHLCV timeout (15s) for %s", ticker)
+        except Exception as e:
+            _src_report("fdr", False)
+            logger.debug("FDR OHLCV failed for %s: %s", ticker, e)
 
     return pd.DataFrame()
 
@@ -548,6 +601,7 @@ async def fetch_realtime_prices_batch(
     async def _fetch_one(client: httpx.AsyncClient, ticker: str):
         async with sem:
             try:
+                await _kis_rate.wait()
                 resp = await client.get(
                     f"{base_url}/uapi/domestic-stock/v1/quotations/inquire-price",
                     headers=headers,
