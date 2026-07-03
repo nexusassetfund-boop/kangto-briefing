@@ -1,5 +1,5 @@
 {
- "updated": "2026-07-03T14:18:33+09:00",
+ "updated": "2026-07-03T14:30:55+09:00",
  "kospi": {
   "price": 7767.38,
   "ma200": 5405.31,
@@ -9,7 +9,7 @@
   "ma50_declining": false,
   "exit_signal": false,
   "entry_allowed": true,
-  "updated": "2026-07-03T14:18:33+09:00"
+  "updated": "2026-07-03T14:30:55+09:00"
  },
  "holdings": [
   {
@@ -19,9 +19,9 @@
    "entry_date": "2026-07-02",
    "entry_price": 113700.0,
    "entry_confidence": 95,
-   "last_price": 116400.0,
+   "last_price": 115800.0,
    "peak_price": 116900.0,
-   "return_pct": 2.37,
+   "return_pct": 1.85,
    "days_held": 1,
    "stage_now": 3,
    "confidence_now": 90,
@@ -35,15 +35,37 @@
    "entry_stage": 3
   },
   {
+   "ticker": "420770",
+   "name": "기가비스",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 168900.0,
+   "entry_confidence": 90,
+   "last_price": 168900.0,
+   "peak_price": 168900.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 90,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 96 — 최상위 강세",
+    "60일 저점 대비 +115.2% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
    "ticker": "000660",
    "name": "SK하이닉스",
    "sector": "반도체 제조업",
    "entry_stage": 1,
    "entry_date": "2026-07-03",
-   "entry_price": 2415000.0,
+   "entry_price": 2430000.0,
    "entry_confidence": 85,
-   "last_price": 2415000.0,
-   "peak_price": 2415000.0,
+   "last_price": 2430000.0,
+   "peak_price": 2430000.0,
    "return_pct": 0.0,
    "days_held": 0,
    "stage_now": 1,
@@ -52,7 +74,7 @@
    "signals_at_entry": [
     "MTT 통과",
     "RS 98 — 최상위 강세",
-    "60일 저점 대비 +163.6% 상승",
+    "60일 저점 대비 +165.3% 상승",
     "MA 정배열 확인"
    ]
   },
@@ -62,10 +84,10 @@
    "sector": "기타 금융업",
    "entry_stage": 1,
    "entry_date": "2026-07-03",
-   "entry_price": 1575000.0,
+   "entry_price": 1582000.0,
    "entry_confidence": 85,
-   "last_price": 1575000.0,
-   "peak_price": 1575000.0,
+   "last_price": 1582000.0,
+   "peak_price": 1582000.0,
    "return_pct": 0.0,
    "days_held": 0,
    "stage_now": 1,
@@ -75,359 +97,7 @@
     "MTT 통과",
     "RS 98 — 최상위 강세",
     "RS 신고점",
-    "60일 저점 대비 +215.6% 상승"
-   ]
-  },
-  {
-   "ticker": "009150",
-   "name": "삼성전기",
-   "sector": "전자부품 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 1945000.0,
-   "entry_confidence": 85,
-   "last_price": 1945000.0,
-   "peak_price": 1945000.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 99 — 최상위 강세",
-    "RS 신고점",
-    "60일 저점 대비 +325.6% 상승"
-   ]
-  },
-  {
-   "ticker": "034730",
-   "name": "SK",
-   "sector": "기타 금융업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 686000.0,
-   "entry_confidence": 85,
-   "last_price": 686000.0,
-   "peak_price": 686000.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 93 — 최상위 강세",
-    "60일 저점 대비 +119.5% 상승",
-    "MA 정배열 확인"
-   ]
-  },
-  {
-   "ticker": "004170",
-   "name": "신세계",
-   "sector": "종합 소매업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 701000.0,
-   "entry_confidence": 85,
-   "last_price": 701000.0,
-   "peak_price": 701000.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 95 — 최상위 강세",
-    "60일 저점 대비 +125.4% 상승",
-    "MA 정배열 확인"
-   ]
-  },
-  {
-   "ticker": "000500",
-   "name": "가온전선",
-   "sector": "절연선 및 케이블 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 285500.0,
-   "entry_confidence": 85,
-   "last_price": 285500.0,
-   "peak_price": 285500.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 99 — 최상위 강세",
-    "60일 저점 대비 +408.7% 상승",
-    "MA 정배열 확인"
-   ]
-  },
-  {
-   "ticker": "069960",
-   "name": "현대백화점",
-   "sector": "종합 소매업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 178800.0,
-   "entry_confidence": 85,
-   "last_price": 178800.0,
-   "peak_price": 178800.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 90 — 최상위 강세",
-    "RS 신고점",
-    "60일 저점 대비 +139.4% 상승"
-   ]
-  },
-  {
-   "ticker": "281820",
-   "name": "케이씨텍",
-   "sector": "측정, 시험, 항해, 제어 및 기타 정밀기기 제조업; 광학기기 제외",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 107400.0,
-   "entry_confidence": 85,
-   "last_price": 107400.0,
-   "peak_price": 107400.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 94 — 최상위 강세",
-    "60일 저점 대비 +144.9% 상승",
-    "MA 정배열 확인"
-   ]
-  },
-  {
-   "ticker": "009155",
-   "name": "삼성전기우",
-   "sector": "",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 684000.0,
-   "entry_confidence": 85,
-   "last_price": 684000.0,
-   "peak_price": 684000.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 98 — 최상위 강세",
-    "RS 신고점",
-    "60일 저점 대비 +293.6% 상승"
-   ]
-  },
-  {
-   "ticker": "319660",
-   "name": "피에스케이",
-   "sector": "특수 목적용 기계 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 181500.0,
-   "entry_confidence": 85,
-   "last_price": 181500.0,
-   "peak_price": 181500.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 97 — 최상위 강세",
-    "RS 신고점",
-    "60일 저점 대비 +133.6% 상승"
-   ]
-  },
-  {
-   "ticker": "222800",
-   "name": "심텍",
-   "sector": "전자부품 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 130400.0,
-   "entry_confidence": 85,
-   "last_price": 130400.0,
-   "peak_price": 130400.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 95 — 최상위 강세",
-    "RS 신고점",
-    "60일 저점 대비 +125.2% 상승"
-   ]
-  },
-  {
-   "ticker": "095610",
-   "name": "테스",
-   "sector": "특수 목적용 기계 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 176900.0,
-   "entry_confidence": 85,
-   "last_price": 176900.0,
-   "peak_price": 176900.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 97 — 최상위 강세",
-    "60일 저점 대비 +183.5% 상승",
-    "MA 정배열 확인"
-   ]
-  },
-  {
-   "ticker": "131290",
-   "name": "티에스이",
-   "sector": "측정, 시험, 항해, 제어 및 기타 정밀기기 제조업; 광학기기 제외",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 252500.0,
-   "entry_confidence": 85,
-   "last_price": 252500.0,
-   "peak_price": 252500.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 96 — 최상위 강세",
-    "RS 신고점",
-    "60일 저점 대비 +129.1% 상승"
-   ]
-  },
-  {
-   "ticker": "089970",
-   "name": "브이엠",
-   "sector": "특수 목적용 기계 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 102500.0,
-   "entry_confidence": 85,
-   "last_price": 102500.0,
-   "peak_price": 102500.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 97 — 최상위 강세",
-    "RS 신고점",
-    "60일 저점 대비 +160.5% 상승"
-   ]
-  },
-  {
-   "ticker": "420770",
-   "name": "기가비스",
-   "sector": "특수 목적용 기계 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 168700.0,
-   "entry_confidence": 90,
-   "last_price": 168700.0,
-   "peak_price": 168700.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 90,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 96 — 최상위 강세",
-    "60일 저점 대비 +114.9% 상승",
-    "MA 정배열 확인"
-   ]
-  },
-  {
-   "ticker": "019210",
-   "name": "와이지-원",
-   "sector": "기타 금속 가공제품 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 22450.0,
-   "entry_confidence": 80,
-   "last_price": 22450.0,
-   "peak_price": 22450.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 80,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 93 — 최상위 강세",
-    "60일 저점 대비 +82.5% 상승",
-    "MA 정배열 확인"
-   ]
-  },
-  {
-   "ticker": "041830",
-   "name": "인바디",
-   "sector": "의료용 기기 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 55700.0,
-   "entry_confidence": 80,
-   "last_price": 55700.0,
-   "peak_price": 55700.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 80,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 87 — 상위 강세",
-    "60일 저점 대비 +103.3% 상승",
-    "MA 정배열 확인"
-   ]
-  },
-  {
-   "ticker": "064290",
-   "name": "인텍플러스",
-   "sector": "특수 목적용 기계 제조업",
-   "entry_stage": 1,
-   "entry_date": "2026-07-03",
-   "entry_price": 50800.0,
-   "entry_confidence": 85,
-   "last_price": 50800.0,
-   "peak_price": 50800.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 1,
-   "confidence_now": 85,
-   "last_updated": "2026-07-03",
-   "signals_at_entry": [
-    "MTT 통과",
-    "RS 95 — 최상위 강세",
-    "RS 신고점",
-    "60일 저점 대비 +156.0% 상승"
+    "60일 저점 대비 +217.0% 상승"
    ]
   }
  ],
@@ -458,9 +128,9 @@
   }
  ],
  "stats": {
-  "holding_count": 19,
+  "holding_count": 4,
   "exited_count": 1,
-  "avg_return": 0.12,
+  "avg_return": 0.46,
   "win_rate": 0.0
  }
 }
