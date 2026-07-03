@@ -493,7 +493,7 @@
           <div>
             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">깡토 추세추종</p>
             <h1 class="text-3xl font-extrabold text-nexus-ink font-headline leading-tight">편입 트래킹</h1>
-            <p class="text-sm text-slate-500 mt-1.5">Stage 3 돌파 시 편입 — 이탈 조건 전까지 유지되며 보유일이 리셋되지 않습니다</p>
+            <p class="text-sm text-slate-500 mt-1.5">스테이지별 독립 편입 (S3 돌파 · S1 초기 추세) — 이탈은 고점 대비 -8% 또는 20일선 하회</p>
           </div>
           <div id="pipelineHeaderStats" class="flex gap-3 flex-wrap md:justify-end"></div>
         </div>
@@ -950,22 +950,37 @@
       </div>`;
     }
 
+    // 스테이지 트랙 메타 (스탁이지 전략실의 1호/2호 방 구분과 동일한 개념)
+    const STAGE_TRACKS = [
+      { stage: 3, title: '스테이지 3 — 돌파 편입',    desc: '전고점 돌파 + 거래량 폭증 (피크 Easy식)',   dot: 'bg-nexus' },
+      { stage: 1, title: '스테이지 1 — 초기 추세 편입', desc: 'MA 정배열 + 상승 초입 (모멘텀 Easy식)',    dot: 'bg-blue-500' },
+    ];
+
+    function _stageGroup(list, stage) {
+      return list.filter(x => (x.entry_stage ?? 3) === stage);
+    }
+
     function renderHoldings(list) {
       const el = document.getElementById('ledgerHoldings');
       if (!list.length) {
-        el.innerHTML = '<div class="bg-white rounded-2xl border border-[#eae5d8] py-12 text-center text-slate-400 text-sm">현재 보유(편입) 종목이 없습니다 — Stage 3 돌파 시 자동 편입됩니다</div>';
+        el.innerHTML = '<div class="bg-white rounded-2xl border border-[#eae5d8] py-12 text-center text-slate-400 text-sm">현재 보유(편입) 종목이 없습니다 — Stage 3 돌파 / Stage 1 초기 추세 시 자동 편입됩니다</div>';
         return;
       }
-      el.innerHTML = `
-      <div class="flex items-center gap-2 mb-3">
-        <span class="inline-block w-2 h-2 rounded-full bg-nexus shrink-0"></span>
-        <h2 class="text-base font-extrabold text-nexus-ink">보유 종목</h2>
-        <span class="text-sm text-slate-400">Stage 3 돌파 편입 — 이탈 조건 전까지 유지</span>
-        <span class="ml-auto text-sm text-slate-400 shrink-0">${list.length}개</span>
-      </div>
-      <div class="bg-white rounded-2xl border border-[#eae5d8] shadow-sm overflow-hidden">
-        ${list.map(_renderHoldingRow).join('')}
-      </div>`;
+      el.innerHTML = STAGE_TRACKS.map(t => {
+        const rows = _stageGroup(list, t.stage);
+        return `
+        <div class="mb-8 last:mb-0">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="inline-block w-2 h-2 rounded-full ${t.dot} shrink-0"></span>
+            <h2 class="text-base font-extrabold text-nexus-ink">${t.title}</h2>
+            <span class="text-sm text-slate-400">${t.desc}</span>
+            <span class="ml-auto text-sm text-slate-400 shrink-0">${rows.length}개</span>
+          </div>
+          ${rows.length
+            ? `<div class="bg-white rounded-2xl border border-[#eae5d8] shadow-sm overflow-hidden">${rows.map(_renderHoldingRow).join('')}</div>`
+            : '<div class="bg-white rounded-2xl border border-[#eae5d8] py-8 text-center text-slate-400 text-sm">보유 종목 없음</div>'}
+        </div>`;
+      }).join('');
     }
 
     function renderExited(list) {
@@ -974,13 +989,18 @@
         el.innerHTML = '<div class="bg-white rounded-2xl border border-[#eae5d8] py-12 text-center text-slate-400 text-sm">이탈 기록이 없습니다</div>';
         return;
       }
-      el.innerHTML = `
+      el.innerHTML = STAGE_TRACKS.map(t => {
+        const rows = _stageGroup(list, t.stage);
+        if (!rows.length) return '';
+        return `
+      <div class="mb-8 last:mb-0">
       <div class="flex items-center gap-2 mb-3">
-        <h2 class="text-base font-extrabold text-nexus-ink">이탈 종목</h2>
-        <span class="text-sm text-slate-400">최근 180일 · ${list.length}건</span>
+        <span class="inline-block w-2 h-2 rounded-full ${t.dot} shrink-0"></span>
+        <h2 class="text-base font-extrabold text-nexus-ink">이탈 — ${t.title.split(' — ')[0]}</h2>
+        <span class="text-sm text-slate-400">최근 180일 · ${rows.length}건</span>
       </div>
       <div class="bg-white rounded-2xl border border-[#eae5d8] shadow-sm overflow-hidden">
-        ${list.map(e => `
+        ${rows.map(e => `
         <div class="flex items-center gap-4 px-5 py-3.5 border-b border-[#f0ece0] last:border-0 hover:bg-[#f6f3ea] transition-colors cursor-pointer"
              onclick="openDetail('${e.ticker}')">
           <div class="flex flex-col items-center min-w-[72px] shrink-0">
@@ -1002,7 +1022,9 @@
             <div class="text-xs font-bold text-slate-600">${(e.entry_price||0).toLocaleString()} → ${(e.exit_price||0).toLocaleString()}원</div>
           </div>
         </div>`).join('')}
+      </div>
       </div>`;
+      }).join('');
     }
 
     // 초기 로드
