@@ -1,15 +1,15 @@
 {
- "updated": "2026-07-03T08:26:27+09:00",
+ "updated": "2026-07-03T11:08:02+09:00",
  "kospi": {
-  "price": 7648.09,
-  "ma200": 5382.48,
-  "ma50": 7820.2,
+  "price": 7767.38,
+  "ma200": 5405.31,
+  "ma50": 7851.17,
   "above_ma200": true,
   "above_ma50": false,
   "ma50_declining": false,
   "exit_signal": false,
   "entry_allowed": true,
-  "updated": "2026-07-03T08:26:27+09:00"
+  "updated": "2026-07-03T11:08:02+09:00"
  },
  "holdings": [
   {
@@ -19,13 +19,13 @@
    "entry_date": "2026-07-02",
    "entry_price": 113700.0,
    "entry_confidence": 95,
-   "last_price": 113700.0,
+   "last_price": 113200.0,
    "peak_price": 113700.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 3,
-   "confidence_now": 95,
-   "last_updated": "2026-07-02",
+   "return_pct": -0.44,
+   "days_held": 1,
+   "stage_now": 1,
+   "confidence_now": 65,
+   "last_updated": "2026-07-03",
    "signals_at_entry": [
     "MTT 통과",
     "전고점 돌파! 거래량 6.35x",
@@ -40,13 +40,13 @@
    "entry_date": "2026-07-02",
    "entry_price": 58600.0,
    "entry_confidence": 95,
-   "last_price": 58600.0,
+   "last_price": 54300.0,
    "peak_price": 58600.0,
-   "return_pct": 0.0,
-   "days_held": 0,
-   "stage_now": 3,
-   "confidence_now": 95,
-   "last_updated": "2026-07-02",
+   "return_pct": -7.34,
+   "days_held": 1,
+   "stage_now": 1,
+   "confidence_now": 75,
+   "last_updated": "2026-07-03",
    "signals_at_entry": [
     "MTT 통과",
     "RS 88 — 상위 강세",
@@ -59,7 +59,7 @@
  "stats": {
   "holding_count": 2,
   "exited_count": 0,
-  "avg_return": 0.0,
+  "avg_return": -3.89,
   "win_rate": 0
  }
 }
