@@ -1,5 +1,5 @@
 {
- "updated": "2026-07-03T12:27:24+09:00",
+ "updated": "2026-07-03T14:13:04+09:00",
  "kospi": {
   "price": 7767.38,
   "ma200": 5405.31,
@@ -9,7 +9,7 @@
   "ma50_declining": false,
   "exit_signal": false,
   "entry_allowed": true,
-  "updated": "2026-07-03T12:27:24+09:00"
+  "updated": "2026-07-03T14:13:04+09:00"
  },
  "holdings": [
   {
@@ -19,9 +19,9 @@
    "entry_date": "2026-07-02",
    "entry_price": 113700.0,
    "entry_confidence": 95,
-   "last_price": 115600.0,
-   "peak_price": 115600.0,
-   "return_pct": 1.67,
+   "last_price": 116900.0,
+   "peak_price": 116900.0,
+   "return_pct": 2.81,
    "days_held": 1,
    "stage_now": 3,
    "confidence_now": 90,
@@ -31,6 +31,491 @@
     "전고점 돌파! 거래량 6.35x",
     "갭상승 동반",
     "MA 정배열"
+   ],
+   "entry_stage": 3
+  },
+  {
+   "ticker": "000660",
+   "name": "SK하이닉스",
+   "sector": "반도체 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 2394000.0,
+   "entry_confidence": 85,
+   "last_price": 2394000.0,
+   "peak_price": 2394000.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 98 — 최상위 강세",
+    "60일 저점 대비 +161.4% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "402340",
+   "name": "SK스퀘어",
+   "sector": "기타 금융업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 1555000.0,
+   "entry_confidence": 85,
+   "last_price": 1555000.0,
+   "peak_price": 1555000.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 98 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +211.6% 상승"
+   ]
+  },
+  {
+   "ticker": "009150",
+   "name": "삼성전기",
+   "sector": "전자부품 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 1941000.0,
+   "entry_confidence": 85,
+   "last_price": 1941000.0,
+   "peak_price": 1941000.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 99 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +324.7% 상승"
+   ]
+  },
+  {
+   "ticker": "034730",
+   "name": "SK",
+   "sector": "기타 금융업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 686000.0,
+   "entry_confidence": 85,
+   "last_price": 686000.0,
+   "peak_price": 686000.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 93 — 최상위 강세",
+    "60일 저점 대비 +119.5% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "004170",
+   "name": "신세계",
+   "sector": "종합 소매업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 701000.0,
+   "entry_confidence": 85,
+   "last_price": 701000.0,
+   "peak_price": 701000.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 95 — 최상위 강세",
+    "60일 저점 대비 +125.4% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "000500",
+   "name": "가온전선",
+   "sector": "절연선 및 케이블 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 285750.0,
+   "entry_confidence": 85,
+   "last_price": 285750.0,
+   "peak_price": 285750.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 99 — 최상위 강세",
+    "60일 저점 대비 +409.1% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "069960",
+   "name": "현대백화점",
+   "sector": "종합 소매업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 180100.0,
+   "entry_confidence": 85,
+   "last_price": 180100.0,
+   "peak_price": 180100.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 90 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +141.1% 상승"
+   ]
+  },
+  {
+   "ticker": "281820",
+   "name": "케이씨텍",
+   "sector": "측정, 시험, 항해, 제어 및 기타 정밀기기 제조업; 광학기기 제외",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 107800.0,
+   "entry_confidence": 85,
+   "last_price": 107800.0,
+   "peak_price": 107800.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 94 — 최상위 강세",
+    "60일 저점 대비 +145.8% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "009155",
+   "name": "삼성전기우",
+   "sector": "",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 685000.0,
+   "entry_confidence": 85,
+   "last_price": 685000.0,
+   "peak_price": 685000.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 98 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +294.1% 상승"
+   ]
+  },
+  {
+   "ticker": "240810",
+   "name": "원익IPS",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 133100.0,
+   "entry_confidence": 60,
+   "last_price": 133100.0,
+   "peak_price": 133100.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 60,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 89 — 상위 강세",
+    "MA 정배열, 저점 대비 +36.0%",
+    "30%↑ 초기 모멘텀 확인"
+   ]
+  },
+  {
+   "ticker": "319660",
+   "name": "피에스케이",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 181400.0,
+   "entry_confidence": 85,
+   "last_price": 181400.0,
+   "peak_price": 181400.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 97 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +133.5% 상승"
+   ]
+  },
+  {
+   "ticker": "222800",
+   "name": "심텍",
+   "sector": "전자부품 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 129500.0,
+   "entry_confidence": 85,
+   "last_price": 129500.0,
+   "peak_price": 129500.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 95 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +123.7% 상승"
+   ]
+  },
+  {
+   "ticker": "084370",
+   "name": "유진테크",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 173100.0,
+   "entry_confidence": 70,
+   "last_price": 173100.0,
+   "peak_price": 173100.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 70,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 91 — 최상위 강세",
+    "60일 저점 대비 +50.7% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "095610",
+   "name": "테스",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 174900.0,
+   "entry_confidence": 85,
+   "last_price": 174900.0,
+   "peak_price": 174900.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 97 — 최상위 강세",
+    "60일 저점 대비 +180.3% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "031980",
+   "name": "피에스케이홀딩스",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 140800.0,
+   "entry_confidence": 65,
+   "last_price": 140800.0,
+   "peak_price": 140800.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 65,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 92 — 최상위 강세",
+    "MA 정배열, 저점 대비 +47.4%",
+    "30%↑ 초기 모멘텀 확인"
+   ]
+  },
+  {
+   "ticker": "131290",
+   "name": "티에스이",
+   "sector": "측정, 시험, 항해, 제어 및 기타 정밀기기 제조업; 광학기기 제외",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 253000.0,
+   "entry_confidence": 85,
+   "last_price": 253000.0,
+   "peak_price": 253000.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 96 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +129.6% 상승"
+   ]
+  },
+  {
+   "ticker": "089970",
+   "name": "브이엠",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 101900.0,
+   "entry_confidence": 85,
+   "last_price": 101900.0,
+   "peak_price": 101900.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 97 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +159.0% 상승"
+   ]
+  },
+  {
+   "ticker": "420770",
+   "name": "기가비스",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 168700.0,
+   "entry_confidence": 90,
+   "last_price": 168700.0,
+   "peak_price": 168700.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 90,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 96 — 최상위 강세",
+    "60일 저점 대비 +114.9% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "019210",
+   "name": "와이지-원",
+   "sector": "기타 금속 가공제품 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 22500.0,
+   "entry_confidence": 80,
+   "last_price": 22500.0,
+   "peak_price": 22500.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 80,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 93 — 최상위 강세",
+    "60일 저점 대비 +82.9% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "122640",
+   "name": "예스티",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 34350.0,
+   "entry_confidence": 70,
+   "last_price": 34350.0,
+   "peak_price": 34350.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 70,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 87 — 상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +79.2% 상승"
+   ]
+  },
+  {
+   "ticker": "041830",
+   "name": "인바디",
+   "sector": "의료용 기기 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 55600.0,
+   "entry_confidence": 80,
+   "last_price": 55600.0,
+   "peak_price": 55600.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 80,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 87 — 상위 강세",
+    "60일 저점 대비 +102.9% 상승",
+    "MA 정배열 확인"
+   ]
+  },
+  {
+   "ticker": "064290",
+   "name": "인텍플러스",
+   "sector": "특수 목적용 기계 제조업",
+   "entry_stage": 1,
+   "entry_date": "2026-07-03",
+   "entry_price": 51500.0,
+   "entry_confidence": 85,
+   "last_price": 51500.0,
+   "peak_price": 51500.0,
+   "return_pct": 0.0,
+   "days_held": 0,
+   "stage_now": 1,
+   "confidence_now": 85,
+   "last_updated": "2026-07-03",
+   "signals_at_entry": [
+    "MTT 통과",
+    "RS 95 — 최상위 강세",
+    "RS 신고점",
+    "60일 저점 대비 +159.6% 상승"
    ]
   }
  ],
@@ -61,9 +546,9 @@
   }
  ],
  "stats": {
-  "holding_count": 1,
+  "holding_count": 23,
   "exited_count": 1,
-  "avg_return": 1.67,
+  "avg_return": 0.12,
   "win_rate": 0.0
  }
 }
