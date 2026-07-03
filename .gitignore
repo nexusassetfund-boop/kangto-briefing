@@ -9,3 +9,6 @@ __pycache__/
 .claude/
 
 .github/
+
+.playwright-mcp/
+holdings-sweep.json
