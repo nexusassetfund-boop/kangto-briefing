@@ -1,5 +1,5 @@
 {
- "updated": "2026-07-03T11:08:02+09:00",
+ "updated": "2026-07-03T12:27:24+09:00",
  "kospi": {
   "price": 7767.38,
   "ma200": 5405.31,
@@ -9,7 +9,7 @@
   "ma50_declining": false,
   "exit_signal": false,
   "entry_allowed": true,
-  "updated": "2026-07-03T11:08:02+09:00"
+  "updated": "2026-07-03T12:27:24+09:00"
  },
  "holdings": [
   {
@@ -19,12 +19,12 @@
    "entry_date": "2026-07-02",
    "entry_price": 113700.0,
    "entry_confidence": 95,
-   "last_price": 113200.0,
-   "peak_price": 113700.0,
-   "return_pct": -0.44,
+   "last_price": 115600.0,
+   "peak_price": 115600.0,
+   "return_pct": 1.67,
    "days_held": 1,
-   "stage_now": 1,
-   "confidence_now": 65,
+   "stage_now": 3,
+   "confidence_now": 90,
    "last_updated": "2026-07-03",
    "signals_at_entry": [
     "MTT 통과",
@@ -32,7 +32,9 @@
     "갭상승 동반",
     "MA 정배열"
    ]
-  },
+  }
+ ],
+ "exited": [
   {
    "ticker": "041830",
    "name": "인바디",
@@ -40,9 +42,9 @@
    "entry_date": "2026-07-02",
    "entry_price": 58600.0,
    "entry_confidence": 95,
-   "last_price": 54300.0,
+   "last_price": 53500.0,
    "peak_price": 58600.0,
-   "return_pct": -7.34,
+   "return_pct": -8.7,
    "days_held": 1,
    "stage_now": 1,
    "confidence_now": 75,
@@ -52,14 +54,16 @@
     "RS 88 — 상위 강세",
     "전고점 돌파! 거래량 2.09x",
     "MA 정배열"
-   ]
+   ],
+   "exit_date": "2026-07-03",
+   "exit_price": 53500.0,
+   "exit_reason": "손절 (-8%)"
   }
  ],
- "exited": [],
  "stats": {
-  "holding_count": 2,
-  "exited_count": 0,
-  "avg_return": -3.89,
-  "win_rate": 0
+  "holding_count": 1,
+  "exited_count": 1,
+  "avg_return": 1.67,
+  "win_rate": 0.0
  }
 }
