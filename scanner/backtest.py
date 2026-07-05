@@ -226,7 +226,9 @@ def simulate(dates, ind, rs_mat, stage_mat, conf_mat, climax_mat, opens, closes,
     dis = pd.DataFrame({col: stage_vals[col].groupby(changed[col].cumsum()).cumcount()
                         for col in stage_vals.columns}, index=stage_vals.index)
 
-    ma_exit = {t: ind[t][exit_ma] for t in ind}
+    # exit_ma가 None/""/"ma0"이면 MA 이탈 비활성 (트레일링 단독)
+    use_ma = bool(exit_ma) and exit_ma != "ma0"
+    ma_exit = {t: ind[t][exit_ma] for t in ind} if use_ma else {}
     holdings = {}   # ticker -> dict
     pending_buy, pending_sell = [], []
     trades = []
@@ -346,11 +348,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--start", default="2021-01-01")
     ap.add_argument("--grid", action="store_true")
+    ap.add_argument("--trail", type=float, default=None, help="trail_stop_pct 오버라이드")
+    ap.add_argument("--exit-ma", type=int, default=None, help="exit MA 기간 오버라이드 (0=MA 이탈 비활성)")
+    ap.add_argument("--tag", default="", help="결과 파일 접미사")
     args = ap.parse_args()
     end = (dt.date.today() - dt.timedelta(days=1)).isoformat()
 
     cfg = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
-    p = cfg["params"]
+    p = dict(cfg["params"])
+    if args.trail is not None:
+        p["trail_stop_pct"] = args.trail
+    if args.exit_ma is not None:
+        p["exit_ma_period"] = args.exit_ma
 
     print("유니버스 로드...", flush=True)
     tickers = fetch_universe()
@@ -408,7 +417,7 @@ def main():
                               max_track=p.get("max_holdings_per_track", 10),
                               max_daily=p.get("max_daily_entries_per_track", 3))
         results[name] = {"metrics": metrics(tr, eq, kospi_aligned, wk), "trades": tr}
-        (CACHE_DIR / f"bt_result_{name}.json").write_text(
+        (CACHE_DIR / f"bt_result_{name}{args.tag}.json").write_text(
             json.dumps(results[name], default=str, ensure_ascii=False), encoding="utf-8")
         print(json.dumps(results[name]["metrics"], ensure_ascii=False, indent=1, default=str), flush=True)
 
