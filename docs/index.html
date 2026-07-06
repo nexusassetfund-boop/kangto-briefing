@@ -491,13 +491,58 @@
       <div class="mb-6">
         <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-5">
           <div>
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">깡토 추세추종</p>
             <h1 class="text-3xl font-extrabold text-nexus-ink font-headline leading-tight">전략 포트폴리오</h1>
             <p class="text-sm text-slate-500 mt-1.5">스테이지별 독립 편입 (S3 돌파 · S1 초기 추세) — 이탈은 고점 대비 -10% 트레일링 또는 60일선 하회</p>
           </div>
           <div id="pipelineHeaderStats" class="flex gap-3 flex-wrap md:justify-end"></div>
         </div>
-        <div id="kospi-status-banner"></div>
+        <details class="group bg-white rounded-xl border border-[#eae5d8] shadow-sm">
+          <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+            <span class="material-symbols-outlined text-slate-400 text-[18px] transition-transform group-open:rotate-90">chevron_right</span>
+            <span class="font-bold text-nexus-ink text-sm">편입 조건 자세히 보기</span>
+            <span class="text-[11px] text-slate-400 hidden sm:inline">스테이지 1 · 스테이지 3</span>
+          </summary>
+          <div class="px-5 pb-5 pt-2 border-t border-[#f0ece0] space-y-4">
+            <div>
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">공통 전제 · MTT 추세 필터</div>
+              <ul class="space-y-1 text-[13px] text-slate-600">
+                <li>· 현재가가 <b class="text-nexus-ink">150일선 · 200일선 위</b></li>
+                <li>· <b class="text-nexus-ink">150일선 &gt; 200일선</b> (장기 정배열)</li>
+                <li>· <b class="text-nexus-ink">200일선 상승 추세</b> (최근 20일 기울기 +)</li>
+                <li>· <b class="text-nexus-ink">RS ≥ 70</b> (상대강도 상위 30%)</li>
+              </ul>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="inline-block w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                <span class="font-extrabold text-nexus-ink text-[13px]">스테이지 1 — 초기 추세 편입</span>
+                <span class="text-[11px] text-slate-400">모멘텀 Easy식</span>
+              </div>
+              <ul class="space-y-1 text-[13px] text-slate-600 pl-1">
+                <li>· 위 MTT 필터 통과 +</li>
+                <li>· <b class="text-nexus-ink">MA 정배열</b> (5 &gt; 20 &gt; 60 &gt; 120일선)</li>
+                <li>· <b class="text-nexus-ink">60일 저점 대비 +50% 이상</b> 상승</li>
+                <li>· 신뢰도 <b class="text-nexus-ink">75점 이상</b></li>
+              </ul>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="inline-block w-2 h-2 rounded-full bg-nexus shrink-0"></span>
+                <span class="font-extrabold text-nexus-ink text-[13px]">스테이지 3 — 돌파 편입</span>
+                <span class="text-[11px] text-slate-400">피크 Easy식</span>
+              </div>
+              <ul class="space-y-1 text-[13px] text-slate-600 pl-1">
+                <li>· 위 MTT 필터 통과 +</li>
+                <li>· <b class="text-nexus-ink">전고점(20~60일 고점) 돌파</b></li>
+                <li>· <b class="text-nexus-ink">거래량 200% 이상 폭증</b></li>
+                <li>· 신뢰도 <b class="text-nexus-ink">70점 이상</b></li>
+              </ul>
+            </div>
+            <div class="text-[12px] text-slate-400 leading-relaxed pt-1 border-t border-[#f0ece0]">
+              공통 편입 게이트 — 클라이맥스 경고 없음 · KOSPI 진입 허용(코스피 &gt; 200일선) · 스테이지 진입 2일 이내 신선도 · 재편입 쿨다운 5일 · 트랙당 보유 10 · 하루 편입 3건
+            </div>
+          </div>
+        </details>
       </div>
 
       <!-- 탭 -->
@@ -857,7 +902,6 @@
         const data = await resp.json();
         _ledgerUpdated = data.updated ? new Date(data.updated) : new Date();
         renderLedgerHeaderStats(data.stats || {});
-        renderKospiStatusBanner(data.kospi || {});
         renderHoldings(data.holdings || []);
         renderExited(data.exited || []);
       } catch (e) {
