@@ -1,5 +1,5 @@
 """
-깡토 스테이지 감지기 S1/S3 트랙 walk-forward 백테스트
+스테이지 감지기 S1/S3 트랙 walk-forward 백테스트
 
 검증 대상 (stage_detector.py + run_scan.py _update_ledger와 동일 규칙):
   편입: S3 = stage3 & conf>=70 / S1 = stage1 & conf>=75
