@@ -509,7 +509,7 @@
         <details class="group bg-white rounded-xl border border-[#eae5d8] shadow-sm">
           <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
             <span class="material-symbols-outlined text-slate-400 text-[18px] transition-transform group-open:rotate-90">chevron_right</span>
-            <span class="font-bold text-nexus-ink text-sm">편입 조건 자세히 보기</span>
+            <span class="font-bold text-nexus-ink text-sm">편입 · 편출(이탈) 조건 자세히 보기</span>
             <span class="text-[11px] text-slate-400 hidden sm:inline">스테이지 1 · 스테이지 3</span>
           </summary>
           <div class="px-5 pb-5 pt-2 border-t border-[#f0ece0] space-y-4">
@@ -551,6 +551,21 @@
             </div>
             <div class="text-[12px] text-slate-400 leading-relaxed pt-1 border-t border-[#f0ece0]">
               공통 편입 게이트 — 클라이맥스 경고 없음 · KOSPI 진입 허용(코스피 &gt; 200일선) · 스테이지 진입 2일 이내 신선도 · 재편입 쿨다운 5일 · 트랙당 보유 10 · 하루 편입 3건
+            </div>
+            <div class="pt-3 border-t border-[#f0ece0]">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="inline-block w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+                <span class="font-extrabold text-nexus-ink text-[13px]">편출(이탈) 조건 — 트랙 공통</span>
+                <span class="text-[11px] text-slate-400">익절 규칙 없음</span>
+              </div>
+              <ul class="space-y-1 text-[13px] text-slate-600 pl-1">
+                <li>· <b class="text-nexus-ink">고점 대비 −10% 트레일링 스탑</b> (진입 직후엔 −10% 손절 겸용)</li>
+                <li>· 종가 &lt; <b class="text-nexus-ink">60일선(MA60)</b> — 추세 이탈</li>
+                <li>· <b class="text-nexus-ink">익절 없음</b> — 승자는 위 두 조건에 걸릴 때까지 계속 보유</li>
+              </ul>
+              <div class="text-[12px] text-slate-400 leading-relaxed mt-1.5">
+                KOSPI 청산 신호 시 — 전량 매도가 아니라 <b>신규 편입만 차단</b>
+              </div>
             </div>
           </div>
         </details>
