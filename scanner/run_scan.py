@@ -519,6 +519,16 @@ async def main():
     logger.info("저장 완료: scan.json / tracking.json / state.json (보유 %d, 이탈 %d)",
                 len(ledger["holdings"]), len(ledger["exited"]))
 
+    # 모델 포트폴리오(구글 시트 미러) 갱신 — 실패해도 스캔 결과에는 영향 없음
+    try:
+        import fetch_sheet
+        pf = fetch_sheet.build()
+        _save_json(fetch_sheet.OUT_PATH, pf)
+        logger.info("portfolio.json 갱신 (보유 %d, 유니버스 %d)",
+                    len(pf.get("holdings", [])), len(pf.get("universe", [])))
+    except Exception as e:
+        logger.warning("모델 포트폴리오 미러 실패(무시): %s", e)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
