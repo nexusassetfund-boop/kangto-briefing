@@ -587,7 +587,14 @@
           <h1 class="text-3xl font-extrabold text-nexus-ink font-headline leading-tight">모델 포트폴리오</h1>
           <p class="text-sm text-slate-500 mt-1.5">넥서스 유니버스 — 실운용 모델 포트폴리오 (구글 시트 연동) <a id="pfSource" href="#" target="_blank" rel="noopener" class="text-blue-600 hover:underline ml-1">시트 원본 ↗</a></p>
         </div>
-        <div id="pfUpdated" class="flex items-end text-[11px] text-slate-400 font-medium"></div>
+        <div class="flex flex-col items-start md:items-end gap-2">
+          <a href="https://github.com/nexusassetfund-boop/nexus-platform/actions/workflows/update-portfolio.yml" target="_blank" rel="noopener"
+             title="열리는 GitHub 페이지에서 'Run workflow'를 누르면 구글 시트를 다시 읽어와 반영합니다 (1~2분 소요)"
+             class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-nexus text-white text-sm font-bold hover:bg-[#8a7238] transition-colors shadow-sm">
+            <span class="material-symbols-outlined text-[18px]">sync</span>시트에서 갱신
+          </a>
+          <span id="pfUpdated" class="text-[11px] text-slate-400 font-medium"></span>
+        </div>
       </div>
 
       <div id="pfKpi" class="mb-6"></div>
