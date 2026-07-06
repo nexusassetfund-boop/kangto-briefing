@@ -462,14 +462,15 @@ def analyze_stock(
     result.confidence = min(confidence, 100)
     result.signals = signals
 
-    # ── 포지션 사이징 (2% 룰) ──
-    stop_pct = abs(params.get("stop_loss_pct", -8)) / 100
+    # ── 포지션 사이징 (2% 룰) — 초기 손절 = 트레일링 스탑과 동일 (-10%)
+    initial_stop = params.get("trail_stop_pct", params.get("stop_loss_pct", -10))
+    stop_pct = abs(initial_stop) / 100
     risk_amount = total_capital * 0.02  # 총 자산의 2%
     loss_per_share = cur * stop_pct
     if loss_per_share > 0:
         shares = int(risk_amount / loss_per_share)
         position_value = shares * cur
         result.position_size_pct = round(position_value / total_capital * 100, 1)
-    result.suggested_stop_pct = params.get("stop_loss_pct", -8)
+    result.suggested_stop_pct = initial_stop
 
     return result

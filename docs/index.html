@@ -792,7 +792,7 @@
       </div>
       <div class="section">
         <h3>포지션 사이징 (2% 룰)</h3>
-        ${row('손절 기준', (d.suggested_stop_pct || 0) + '%')}
+        ${row('이탈 기준', '고점 대비 ' + (d.suggested_stop_pct || -10) + '% 트레일링 · 종가 < MA60')}
         ${row('적정 비중', (d.position_size_pct || 0) + '%')}
         ${row('저점대비 상승', '+' + (d.rise_from_low_pct || 0) + '%')}
         ${row('스테이지 체류', d.days_in_stage != null ? d.days_in_stage + '일째' : '-')}
