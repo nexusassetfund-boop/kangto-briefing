@@ -193,6 +193,89 @@ def _quality_score(m: dict) -> int | None:
     return round(s / w * 100) if w else None
 
 
+_FS_LABELS = [
+    ("ROA>0", "당기 ROA 흑자"), ("CFO>0", "영업현금흐름 흑자"), ("dROA>0", "ROA 개선"),
+    ("CFO>NI", "이익의 질(현금 > 순이익)"), ("dLev<0", "부채(비유동) 감소"), ("dCurr>0", "유동비율 개선"),
+    ("noNewShares", "신주 미발행"), ("dMargin>0", "매출총이익률 개선"), ("dTurn>0", "자산회전율 개선"),
+]
+
+
+def _fscore(corp: str) -> dict | None:
+    """Piotroski F-Score(9점) — DART 전체재무제표(연결, 최근 사업연도)로 t vs t-1 비교."""
+    year = dt.datetime.now(tz=KST).year - 1
+    rows = None
+    for fs in ("CFS", "OFS"):
+        url = (f"{_DART}/fnlttSinglAcntAll.json?crtfc_key={DART_KEY}&corp_code={corp}"
+               f"&bsns_year={year}&reprt_code=11011&fs_div={fs}")
+        try:
+            with urllib.request.urlopen(url, timeout=30) as r:
+                d = json.loads(r.read().decode())
+        except Exception as e:
+            logger.warning("F-Score 재무 실패 %s: %s", corp, e)
+            return None
+        if d.get("status") == "000" and d.get("list"):
+            rows = d["list"]
+            break
+    if not rows:
+        return None
+
+    def get(nm, sj, per):
+        for x in rows:
+            if x.get("sj_div") != sj:
+                continue
+            a = x.get("account_nm", "")
+            if a == nm or a == nm + "(손실)" or a.startswith(nm):
+                return _num(x.get(per + "_amount"))
+        return None
+
+    def pair(nm, sj):
+        return get(nm, sj, "thstrm"), get(nm, sj, "frmtrm")
+
+    A_t, A_p = pair("자산총계", "BS")
+    CA_t, CA_p = pair("유동자산", "BS")
+    CL_t, CL_p = pair("유동부채", "BS")
+    NCL_t, NCL_p = pair("비유동부채", "BS")
+    CAP_t, CAP_p = pair("자본금", "BS")
+    REV_t, REV_p = pair("매출액", "CIS")
+    GP_t, GP_p = pair("매출총이익", "CIS")
+    NI_t, NI_p = pair("당기순이익", "CIS")
+    CFO_t, CFO_p = pair("영업활동 현금흐름", "CF")
+    if REV_t is None:
+        REV_t, REV_p = pair("매출액", "IS")
+    if GP_t is None:
+        GP_t, GP_p = pair("매출총이익", "IS")
+    if NI_t is None:
+        NI_t, NI_p = pair("당기순이익", "IS")
+
+    def ratio(n, d):
+        return (n / d) if (n is not None and d) else None
+
+    roa_t, roa_p = ratio(NI_t, A_t), ratio(NI_p, A_p)
+    lev_t, lev_p = ratio(NCL_t, A_t), ratio(NCL_p, A_p)
+    cr_t, cr_p = ratio(CA_t, CL_t), ratio(CA_p, CL_p)
+    gm_t, gm_p = ratio(GP_t, REV_t), ratio(GP_p, REV_p)
+    at_t, at_p = ratio(REV_t, A_t), ratio(REV_p, A_p)
+
+    def gt(a, b):
+        return a is not None and b is not None and a > b
+
+    def lt(a, b):
+        return a is not None and b is not None and a < b
+
+    c = {
+        "ROA>0": int((roa_t or 0) > 0),
+        "CFO>0": int((CFO_t or 0) > 0),
+        "dROA>0": int(gt(roa_t, roa_p)),
+        "CFO>NI": int(gt(CFO_t, NI_t)),
+        "dLev<0": int(lt(lev_t, lev_p)),
+        "dCurr>0": int(gt(cr_t, cr_p)),
+        "noNewShares": int(CAP_t is not None and CAP_p is not None and CAP_t <= CAP_p),
+        "dMargin>0": int(gt(gm_t, gm_p)),
+        "dTurn>0": int(gt(at_t, at_p)),
+    }
+    return {"score": sum(c.values()), "components": c, "year": year}
+
+
 def _company(corp: str) -> dict:
     """DART 기업개요 — 대표·설립·시장·홈페이지·주소."""
     if corp in _company_cache:
@@ -246,6 +329,7 @@ def _enrich(rec: dict) -> dict:
     out["financials"] = fin.get("trend", [])
     out["metrics"] = fin.get("metrics", {})
     out["quality_score"] = _quality_score(fin.get("metrics", {}))
+    out["f_score"] = _fscore(corp) if corp else None  # Piotroski F-Score(9점)
     out["company"] = _company(corp) if corp else {}
     out["biz_summary"] = _fnguide_business(code)  # FnGuide Business Summary
     return out

@@ -1043,6 +1043,12 @@
       ? '<span class="text-slate-300 text-xs">-</span>'
       : `<span class="inline-block px-2 py-0.5 rounded text-[12px] font-extrabold ${q >= 70 ? 'bg-red-50 text-red-600 border border-red-200' : q >= 40 ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}">${q}</span>`;
 
+    // Piotroski F-Score(0~9) 배지
+    const _fBadge = f => (!f || f.score == null)
+      ? '<span class="text-slate-300 text-xs">-</span>'
+      : `<span class="inline-block px-2 py-0.5 rounded text-[12px] font-extrabold ${f.score >= 7 ? 'bg-red-50 text-red-600 border border-red-200' : f.score >= 4 ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}">${f.score}<span class="text-[9px] font-normal opacity-70">/9</span></span>`;
+    const _FS_LABELS = { 'ROA>0': '당기 ROA 흑자', 'CFO>0': '영업현금흐름 흑자', 'dROA>0': 'ROA 개선', 'CFO>NI': '이익의 질(현금 > 순이익)', 'dLev<0': '부채(비유동) 감소', 'dCurr>0': '유동비율 개선', 'noNewShares': '신주 미발행', 'dMargin>0': '매출총이익률 개선', 'dTurn>0': '자산회전율 개선' };
+
     function _valTable(headers, rowsHtml, align) {
       const th = headers.map((h, i) => `<th class="px-3 py-2.5 font-medium ${align[i] === 1 ? 'text-right' : align[i] === 2 ? 'text-center' : 'text-left'} ${i === 0 ? 'pl-4' : ''} ${i === headers.length - 1 ? 'pr-4' : ''}">${h}</th>`).join('');
       return `<div class="bg-white rounded-2xl border border-[#eae5d8] shadow-sm overflow-hidden"><div class="overflow-x-auto">
@@ -1086,10 +1092,10 @@
     function renderValUniverse(list) {
       const el = document.getElementById('valUniverse');
       if (!list.length) { el.innerHTML = _valEmpty('유니버스가 비어있습니다 — value_universe.json에 추가하세요'); return; }
-      const rows = [...list].sort((a, b) => (b.quality_score ?? -1) - (a.quality_score ?? -1)).map(u => {
+      const rows = [...list].sort((a, b) => ((b.f_score && b.f_score.score) ?? -1) - ((a.f_score && a.f_score.score) ?? -1)).map(u => {
         const m = u.metrics || {};
         return `<tr class="border-b border-[#f0ece0] last:border-0 hover:bg-[#f6f3ea] align-top cursor-pointer" onclick="openValueDetail('${_esc(u.code)}')">
-          <td class="px-4 py-3.5 text-center">${_qBadge(u.quality_score)}</td>
+          <td class="px-4 py-3.5 text-center">${_fBadge(u.f_score)}</td>
           <td class="px-3 py-3.5"><span class="font-bold text-nexus-ink hover:text-blue-700">${_esc(u.name)}</span><span class="text-[10px] text-slate-400 ml-1.5">${_esc(u.code)}</span><div class="text-[11px] text-slate-400">${_esc(u.sector)}</div></td>
           <td class="px-3 py-3.5 text-right ${m.roe >= 15 ? 'text-red-500 font-semibold' : 'text-slate-700'}">${_mNum(m.roe, '%')}</td>
           <td class="px-3 py-3.5 text-right text-slate-700">${_mNum(m.op_margin, '%')}</td>
@@ -1099,7 +1105,7 @@
           <td class="px-4 py-3.5 text-[11px] text-slate-500 whitespace-normal max-w-[280px]"><div>${_esc(u.point)}</div>${u.risk ? `<div class="text-red-400 mt-0.5">⚠ ${_esc(u.risk)}</div>` : ''}</td>
         </tr>`;
       }).join('');
-      el.innerHTML = _valTable(['퀄리티', '종목', 'ROE', '영업이익률', '부채비율', '매출성장', '목표가', '투자포인트 / 리스크'], rows, [2, 0, 1, 1, 1, 1, 1, 0]);
+      el.innerHTML = _valTable(['F-Score', '종목', 'ROE', '영업이익률', '부채비율', '매출성장', '목표가', '투자포인트 / 리스크'], rows, [2, 0, 1, 1, 1, 1, 1, 0]);
     }
 
     function renderValPortfolio(list) {
@@ -1108,7 +1114,7 @@
       const rows = list.map(p => {
         const m = p.metrics || {};
         return `<tr class="border-b border-[#f0ece0] last:border-0 hover:bg-[#f6f3ea] cursor-pointer" onclick="openValueDetail('${_esc(p.code)}')">
-          <td class="px-4 py-3.5 text-center">${_qBadge(p.quality_score)}</td>
+          <td class="px-4 py-3.5 text-center">${_fBadge(p.f_score)}</td>
           <td class="px-3 py-3.5"><span class="font-bold text-nexus-ink hover:text-blue-700">${_esc(p.name)}</span><span class="text-[10px] text-slate-400 ml-1.5">${_esc(p.code)}</span></td>
           <td class="px-3 py-3.5 text-slate-500 text-xs">${_esc(p.buy_date) || '-'}</td>
           <td class="px-3 py-3.5 text-right text-slate-600">${p.buy_price ? p.buy_price.toLocaleString() : '-'}</td>
@@ -1118,7 +1124,7 @@
           <td class="px-4 py-3.5 text-[11px] text-slate-400">${_esc(p.memo)}</td>
         </tr>`;
       }).join('');
-      el.innerHTML = _valTable(['퀄리티', '종목', '매수일', '매수가', '수량', '목표가', 'ROE', '메모'], rows, [2, 0, 0, 1, 1, 1, 1, 0]);
+      el.innerHTML = _valTable(['F-Score', '종목', '매수일', '매수가', '수량', '목표가', 'ROE', '메모'], rows, [2, 0, 0, 1, 1, 1, 1, 0]);
     }
 
     // 종목 클릭 → 상세(기업개요·사업영역·퀄리티·재무추이) 모달
@@ -1135,7 +1141,7 @@
       const hp = c.homepage ? `<a href="https://${esc(c.homepage.replace(/^https?:\/\//, ''))}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:none">${esc(c.homepage)}</a>` : '';
       content.innerHTML = `
         <h2>${esc(rec.name)} <span style="color:#8b8fa3;font-size:14px">${esc(rec.code)}</span>
-          ${rec.quality_score != null ? `<span class="badge" style="background:rgba(157,132,73,.18);color:#8a7238">퀄리티 ${rec.quality_score}</span>` : ''}
+          ${rec.f_score ? `<span class="badge" style="background:rgba(157,132,73,.18);color:#8a7238">F-Score ${rec.f_score.score}/9</span>` : ''}
         </h2>
         <div class="section" style="margin-bottom:12px">
           <h3>기업개요</h3>
@@ -1153,7 +1159,12 @@
             ${row('산출근거', esc(rec.note))}${row('투자포인트', esc(rec.point))}${row('리스크', esc(rec.risk))}
           </div>
         </div>
-        <div class="section"><h3>재무 5년 추이</h3>${_finBarChart(rec.financials || [])}</div>`;
+        ${rec.f_score ? `<div class="section" style="margin-top:12px"><h3>Piotroski F-Score · ${rec.f_score.score}/9</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 16px;font-size:12px">
+            ${Object.keys(_FS_LABELS).map(k => { const ok = rec.f_score.components && rec.f_score.components[k]; return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f4efe2"><span style="color:#64748b">${_FS_LABELS[k]}</span><span style="color:${ok ? '#16a34a' : '#cbd5e1'};font-weight:800">${ok ? '✓' : '·'}</span></div>`; }).join('')}
+          </div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:6px">7~9 우량 · 4~6 보통 · 0~3 부진 (${rec.f_score.year} 사업연도 기준)</div></div>` : ''}
+        <div class="section" style="margin-top:12px"><h3>재무 5년 추이</h3>${_finBarChart(rec.financials || [])}</div>`;
     }
 
     const _finFmt = v => v == null ? '-' : Math.abs(v) >= 1e12 ? (v / 1e12).toFixed(1) + '조원' : Math.round(v / 1e8).toLocaleString() + '억원';

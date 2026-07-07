@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-07T11:40:51+09:00",
+  "updated": "2026-07-07T15:56:04+09:00",
   "dart": true,
   "universe": [
     {
@@ -62,6 +62,21 @@
         "ni_growth": 116.9
       },
       "quality_score": 100,
+      "f_score": {
+        "score": 8,
+        "components": {
+          "ROA>0": 1,
+          "CFO>0": 1,
+          "dROA>0": 1,
+          "CFO>NI": 1,
+          "dLev<0": 1,
+          "dCurr>0": 1,
+          "noNewShares": 1,
+          "dMargin>0": 1,
+          "dTurn>0": 0
+        },
+        "year": 2025
+      },
       "company": {
         "ceo": "곽노정",
         "est": "1949-10-15",
@@ -134,6 +149,21 @@
         "ni_growth": -65.4
       },
       "quality_score": 28,
+      "f_score": {
+        "score": 2,
+        "components": {
+          "ROA>0": 0,
+          "CFO>0": 0,
+          "dROA>0": 0,
+          "CFO>NI": 0,
+          "dLev<0": 0,
+          "dCurr>0": 1,
+          "noNewShares": 1,
+          "dMargin>0": 0,
+          "dTurn>0": 0
+        },
+        "year": 2025
+      },
       "company": {
         "ceo": "박주형",
         "est": "1955-12-09",
@@ -188,6 +218,21 @@
         "ni_growth": 413.0
       },
       "quality_score": 100,
+      "f_score": {
+        "score": 5,
+        "components": {
+          "ROA>0": 1,
+          "CFO>0": 0,
+          "dROA>0": 1,
+          "CFO>NI": 0,
+          "dLev<0": 1,
+          "dCurr>0": 1,
+          "noNewShares": 0,
+          "dMargin>0": 1,
+          "dTurn>0": 0
+        },
+        "year": 2025
+      },
       "company": {
         "ceo": "반성연",
         "est": "2016-03-09",
@@ -242,6 +287,21 @@
         "ni_growth": 141.6
       },
       "quality_score": 85,
+      "f_score": {
+        "score": 3,
+        "components": {
+          "ROA>0": 1,
+          "CFO>0": 0,
+          "dROA>0": 1,
+          "CFO>NI": 0,
+          "dLev<0": 0,
+          "dCurr>0": 1,
+          "noNewShares": 0,
+          "dMargin>0": 0,
+          "dTurn>0": 0
+        },
+        "year": 2025
+      },
       "company": {
         "ceo": "김정규",
         "est": "2021-11-02",
@@ -313,6 +373,21 @@
         "ni_growth": 116.9
       },
       "quality_score": 100,
+      "f_score": {
+        "score": 8,
+        "components": {
+          "ROA>0": 1,
+          "CFO>0": 1,
+          "dROA>0": 1,
+          "CFO>NI": 1,
+          "dLev<0": 1,
+          "dCurr>0": 1,
+          "noNewShares": 1,
+          "dMargin>0": 1,
+          "dTurn>0": 0
+        },
+        "year": 2025
+      },
       "company": {
         "ceo": "곽노정",
         "est": "1949-10-15",
@@ -382,6 +457,21 @@
         "ni_growth": -65.4
       },
       "quality_score": 28,
+      "f_score": {
+        "score": 2,
+        "components": {
+          "ROA>0": 0,
+          "CFO>0": 0,
+          "dROA>0": 0,
+          "CFO>NI": 0,
+          "dLev<0": 0,
+          "dCurr>0": 1,
+          "noNewShares": 1,
+          "dMargin>0": 0,
+          "dTurn>0": 0
+        },
+        "year": 2025
+      },
       "company": {
         "ceo": "박주형",
         "est": "1955-12-09",
@@ -433,6 +523,21 @@
         "ni_growth": 413.0
       },
       "quality_score": 100,
+      "f_score": {
+        "score": 5,
+        "components": {
+          "ROA>0": 1,
+          "CFO>0": 0,
+          "dROA>0": 1,
+          "CFO>NI": 0,
+          "dLev<0": 1,
+          "dCurr>0": 1,
+          "noNewShares": 0,
+          "dMargin>0": 1,
+          "dTurn>0": 0
+        },
+        "year": 2025
+      },
       "company": {
         "ceo": "반성연",
         "est": "2016-03-09",
@@ -484,6 +589,21 @@
         "ni_growth": 141.6
       },
       "quality_score": 85,
+      "f_score": {
+        "score": 3,
+        "components": {
+          "ROA>0": 1,
+          "CFO>0": 0,
+          "dROA>0": 1,
+          "CFO>NI": 0,
+          "dLev<0": 0,
+          "dCurr>0": 1,
+          "noNewShares": 0,
+          "dMargin>0": 0,
+          "dTurn>0": 0
+        },
+        "year": 2025
+      },
       "company": {
         "ceo": "김정규",
         "est": "2021-11-02",
