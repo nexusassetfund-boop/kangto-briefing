@@ -31,6 +31,8 @@ _DART = "https://opendart.fss.or.kr/api"
 
 _corp_cache: dict[str, str] | None = None
 _fin_cache: dict[str, dict] = {}
+_company_cache: dict[str, dict] = {}
+_CORP_CLS = {"Y": "코스피", "K": "코스닥", "N": "코넥스", "E": "기타"}
 
 
 def _num(s):
@@ -189,6 +191,29 @@ def _quality_score(m: dict) -> int | None:
     return round(s / w * 100) if w else None
 
 
+def _company(corp: str) -> dict:
+    """DART 기업개요 — 대표·설립·시장·홈페이지·주소."""
+    if corp in _company_cache:
+        return _company_cache[corp]
+    info = {}
+    try:
+        with urllib.request.urlopen(f"{_DART}/company.json?crtfc_key={DART_KEY}&corp_code={corp}", timeout=20) as r:
+            d = json.loads(r.read().decode())
+        if d.get("status") == "000":
+            est = (d.get("est_dt") or "").strip()
+            info = {
+                "ceo": (d.get("ceo_nm") or "").strip() or None,
+                "est": f"{est[:4]}-{est[4:6]}-{est[6:]}" if len(est) == 8 else None,
+                "market": _CORP_CLS.get(d.get("corp_cls"), None),
+                "homepage": (d.get("hm_url") or "").strip() or None,
+                "address": (d.get("adres") or "").strip() or None,
+            }
+    except Exception as e:
+        logger.warning("기업개요 실패 %s: %s", corp, e)
+    _company_cache[corp] = info
+    return info
+
+
 def _enrich(rec: dict) -> dict:
     code = rec.get("code", "")
     corp = _corp_map().get(code)
@@ -197,7 +222,8 @@ def _enrich(rec: dict) -> dict:
     out["financials"] = fin.get("trend", [])
     out["metrics"] = fin.get("metrics", {})
     out["quality_score"] = _quality_score(fin.get("metrics", {}))
-    # 목표가 대비 상승여력(현재가는 추후 시세 연동 시 계산)
+    out["company"] = _company(corp) if corp else {}
+    out["business"] = rec.get("business", "")  # 사업 영역 (직접 작성)
     return out
 
 

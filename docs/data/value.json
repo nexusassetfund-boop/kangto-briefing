@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-07T08:30:28+09:00",
+  "updated": "2026-07-07T09:17:50+09:00",
   "dart": true,
   "universe": [
     {
@@ -12,6 +12,7 @@
       "point": "HBM 사이클 수혜, 메모리 업턴",
       "risk": "메모리 다운사이클 진입 시 실적 급락",
       "note": "",
+      "business": "메모리 반도체(DRAM·NAND) 제조·판매. AI 서버용 고대역폭메모리(HBM)에서 글로벌 선두권.",
       "financials": [
         {
           "year": 2020,
@@ -60,7 +61,14 @@
         "rev_growth": 46.8,
         "ni_growth": 116.9
       },
-      "quality_score": 100
+      "quality_score": 100,
+      "company": {
+        "ceo": "곽노정",
+        "est": "1949-10-15",
+        "market": "코스피",
+        "homepage": "www.skhynix.com",
+        "address": "경기도 이천시  부발읍 경충대로 2091"
+      }
     },
     {
       "name": "신세계",
@@ -72,6 +80,7 @@
       "point": "백화점 저평가, 자산가치",
       "risk": "소비 둔화",
       "note": "",
+      "business": "백화점·면세점 중심 유통업. 주요 상권 부동산 자산 다수 보유해 자산가치 대비 저평가.",
       "financials": [
         {
           "year": 2020,
@@ -120,7 +129,14 @@
         "rev_growth": 5.5,
         "ni_growth": -65.4
       },
-      "quality_score": 28
+      "quality_score": 28,
+      "company": {
+        "ceo": "박주형",
+        "est": "1955-12-09",
+        "market": "코스피",
+        "homepage": "www.shinsegae.com",
+        "address": "서울특별시 중구  소공로 63 (충무로1가) 신세계백화점건물 (주)신세계"
+      }
     },
     {
       "name": "달바글로벌",
@@ -132,6 +148,7 @@
       "point": "브랜드 성장",
       "risk": "경쟁 심화",
       "note": "",
+      "business": "비건 스킨케어 브랜드 '달바(d'Alba)' 운영. 국내외 온·오프라인 판매 및 화장품 수출 성장.",
       "financials": [
         {
           "year": 2023,
@@ -162,7 +179,14 @@
         "rev_growth": 68.2,
         "ni_growth": 413.0
       },
-      "quality_score": 100
+      "quality_score": 100,
+      "company": {
+        "ceo": "반성연",
+        "est": "2016-03-09",
+        "market": "코스피",
+        "homepage": "dalbaglobal.com",
+        "address": "서울특별시 마포구 마포대로 78 (도화동, 자람빌딩), 12층"
+      }
     },
     {
       "name": "SK스퀘어",
@@ -174,6 +198,7 @@
       "point": "지주 저평가, NAV 할인",
       "risk": "자회사 실적 변동",
       "note": "",
+      "business": "SK그룹 ICT 투자지주회사. SK하이닉스·11번가·티맵모빌리티 등 지분 보유, 순자산가치(NAV) 대비 할인 거래.",
       "financials": [
         {
           "year": 2023,
@@ -204,7 +229,14 @@
         "rev_growth": -14.4,
         "ni_growth": 141.6
       },
-      "quality_score": 85
+      "quality_score": 85,
+      "company": {
+        "ceo": "김정규",
+        "est": "2021-11-02",
+        "market": "코스피",
+        "homepage": "www.sksquare.com",
+        "address": "서울특별시 중구 을지로 65 SK T타워"
+      }
     }
   ],
   "portfolio": [
@@ -264,7 +296,15 @@
         "rev_growth": 46.8,
         "ni_growth": 116.9
       },
-      "quality_score": 100
+      "quality_score": 100,
+      "company": {
+        "ceo": "곽노정",
+        "est": "1949-10-15",
+        "market": "코스피",
+        "homepage": "www.skhynix.com",
+        "address": "경기도 이천시  부발읍 경충대로 2091"
+      },
+      "business": ""
     },
     {
       "name": "신세계",
@@ -322,7 +362,15 @@
         "rev_growth": 5.5,
         "ni_growth": -65.4
       },
-      "quality_score": 28
+      "quality_score": 28,
+      "company": {
+        "ceo": "박주형",
+        "est": "1955-12-09",
+        "market": "코스피",
+        "homepage": "www.shinsegae.com",
+        "address": "서울특별시 중구  소공로 63 (충무로1가) 신세계백화점건물 (주)신세계"
+      },
+      "business": ""
     },
     {
       "name": "달바글로벌",
@@ -362,7 +410,15 @@
         "rev_growth": 68.2,
         "ni_growth": 413.0
       },
-      "quality_score": 100
+      "quality_score": 100,
+      "company": {
+        "ceo": "반성연",
+        "est": "2016-03-09",
+        "market": "코스피",
+        "homepage": "dalbaglobal.com",
+        "address": "서울특별시 마포구 마포대로 78 (도화동, 자람빌딩), 12층"
+      },
+      "business": ""
     },
     {
       "name": "SK스퀘어",
@@ -402,7 +458,15 @@
         "rev_growth": -14.4,
         "ni_growth": 141.6
       },
-      "quality_score": 85
+      "quality_score": 85,
+      "company": {
+        "ceo": "김정규",
+        "est": "2021-11-02",
+        "market": "코스피",
+        "homepage": "www.sksquare.com",
+        "address": "서울특별시 중구 을지로 65 SK T타워"
+      },
+      "business": ""
     }
   ]
 }
