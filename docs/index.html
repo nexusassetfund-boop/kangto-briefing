@@ -642,11 +642,17 @@
           <p class="text-sm text-slate-500 mt-1.5">저평가 우량주 발굴 · 퀄리티(F-Score식)·재무 5년 추이·배당 — DART 재무 연동</p>
         </div>
         <div class="flex flex-col items-start md:items-end gap-2">
-          <a href="https://github.com/nexusassetfund-boop/nexus-platform/actions/workflows/update-value.yml" target="_blank" rel="noopener"
-             title="분기보고서가 올라온 뒤 'Run workflow'를 누르면 DART 재무를 다시 계산해 반영합니다"
-             class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-nexus text-white text-sm font-bold hover:bg-[#8a7238] transition-colors shadow-sm">
-            <span class="material-symbols-outlined text-[18px]">sync</span>재무 갱신
-          </a>
+          <div class="flex gap-2">
+            <button onclick="openValueEditor()"
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white text-nexus-ink border border-[#e0d8c4] text-sm font-bold hover:bg-[#f6f3ea] transition-colors shadow-sm">
+              <span class="material-symbols-outlined text-[18px]">edit_note</span>종목 편집
+            </button>
+            <a href="https://github.com/nexusassetfund-boop/nexus-platform/actions/workflows/update-value.yml" target="_blank" rel="noopener"
+               title="분기보고서가 올라온 뒤 'Run workflow'를 누르면 DART 재무를 다시 계산해 반영합니다"
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-nexus text-white text-sm font-bold hover:bg-[#8a7238] transition-colors shadow-sm">
+              <span class="material-symbols-outlined text-[18px]">sync</span>재무 갱신
+            </a>
+          </div>
           <span id="valUpdated" class="text-[11px] text-slate-400 font-medium"></span>
         </div>
       </div>
@@ -686,6 +692,15 @@
           <div class="spinner"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ── 가치투자 종목 편집 모달 ── -->
+  <div class="modal-overlay" id="valEditModal">
+    <div class="modal-inner" style="max-width:680px">
+      <button onclick="document.getElementById('valEditModal').classList.remove('open')"
+        style="float:right;background:none;border:none;color:#8b8fa3;font-size:22px;cursor:pointer;line-height:1">&times;</button>
+      <div id="valEditBody"></div>
     </div>
   </div>
 
@@ -1091,6 +1106,68 @@
 
     // 외부(시트·DART·FnGuide) 텍스트를 innerHTML에 넣기 전 이스케이프 (XSS 방지)
     const _esc = s => (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    // ── 가치투자 종목 편집기 (폼 → value_universe.json 생성) ──────────
+    const _UNI_FIELDS = ['name', 'code', 'sector', 'since', 'target_price', 'fair_value', 'point', 'risk', 'note', 'business'];
+    const _PF_FIELDS = ['name', 'code', 'buy_date', 'buy_price', 'qty', 'target_price', 'memo'];
+    let _editU = [], _editP = [];
+    const _pickFields = (o, fs) => { const r = {}; fs.forEach(f => { r[f] = (o && o[f] !== undefined) ? o[f] : null; }); return r; };
+    const _ev = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const _numOrNull = s => { s = (s || '').replace(/,/g, '').trim(); return s === '' ? null : (isNaN(+s) ? s : +s); };
+
+    function openValueEditor() {
+      _editU = ((_valData && _valData.universe) || []).map(x => _pickFields(x, _UNI_FIELDS));
+      _editP = ((_valData && _valData.portfolio) || []).map(x => _pickFields(x, _PF_FIELDS));
+      document.getElementById('valEditModal').classList.add('open');
+      renderValEditor();
+    }
+    function _rmU(i) { _editU.splice(i, 1); renderValEditor(); }
+    function _rmP(i) { _editP.splice(i, 1); renderValEditor(); }
+    function addUni() {
+      const name = _ev('eu_name'), code = _ev('eu_code');
+      if (!name || !code) { alert('종목명과 종목코드는 필수입니다'); return; }
+      _editU.push({ name, code, sector: _ev('eu_sector') || null, since: _ev('eu_since') || null, target_price: _numOrNull(_ev('eu_target')), fair_value: _numOrNull(_ev('eu_fair')), point: _ev('eu_point') || null, risk: _ev('eu_risk') || null, note: _ev('eu_note') || null, business: null });
+      renderValEditor();
+    }
+    function addPf() {
+      const name = _ev('ep_name'), code = _ev('ep_code');
+      if (!name || !code) { alert('종목명과 종목코드는 필수입니다'); return; }
+      _editP.push({ name, code, buy_date: _ev('ep_date') || null, buy_price: _numOrNull(_ev('ep_price')), qty: _numOrNull(_ev('ep_qty')), target_price: _numOrNull(_ev('ep_target')), memo: _ev('ep_memo') || null });
+      renderValEditor();
+    }
+    function genValueJSON() {
+      const out = { _readme: '가치투자 전용 입력 파일. 사이트 종목 편집기로 생성. 재무·F-Score·현재가는 자동 계산됨.', universe: _editU, portfolio: _editP };
+      document.getElementById('vjson').value = JSON.stringify(out, null, 2);
+      document.getElementById('vjsonWrap').style.display = 'block';
+      document.getElementById('vjsonWrap').scrollIntoView({ behavior: 'smooth' });
+    }
+    function copyValueJSON() {
+      const t = document.getElementById('vjson'); t.select(); navigator.clipboard && navigator.clipboard.writeText(t.value);
+      const b = document.getElementById('vcopy'); b.textContent = '복사됨 ✓'; setTimeout(() => b.textContent = '복사', 1500);
+    }
+    function renderValEditor() {
+      const inp = (id, ph) => `<input id="${id}" placeholder="${ph}" style="width:100%;padding:6px 8px;border:1px solid #e3dcc8;border-radius:6px;font-size:12px;background:#fff;box-sizing:border-box">`;
+      const item = (o, rm, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0ebdd;font-size:13px"><span style="flex:1"><b>${_esc(o.name)}</b> <span style="color:#94a3b8;font-size:11px">${_esc(o.code)}</span>${o.target_price ? ` <span style="color:#94a3b8;font-size:11px">목표 ${(+o.target_price).toLocaleString()}</span>` : ''}</span><button onclick="${rm}(${i})" style="color:#ef4444;background:none;border:none;cursor:pointer;font-weight:700">✕</button></div>`;
+      const uList = _editU.map((u, i) => item(u, '_rmU', i)).join('') || '<div style="color:#94a3b8;font-size:12px;padding:6px 0">없음</div>';
+      const pList = _editP.map((p, i) => item(p, '_rmP', i)).join('') || '<div style="color:#94a3b8;font-size:12px;padding:6px 0">없음</div>';
+      const btn = (fn, t) => `<button onclick="${fn}" style="margin-top:8px;padding:6px 14px;background:#9d8449;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">${t}</button>`;
+      document.getElementById('valEditBody').innerHTML = `
+        <h2>가치투자 종목 편집</h2>
+        <p style="font-size:12px;color:#64748b;margin:-6px 0 14px">재무·F-Score·기업개요·현재가는 자동으로 채워집니다. 여기선 종목·목표가·투자논리만 관리합니다.</p>
+        <div class="section" style="margin-bottom:12px"><h3>밸류 유니버스 (${_editU.length})</h3>${uList}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">${inp('eu_name', '종목명 *')}${inp('eu_code', '종목코드 * (6자리)')}${inp('eu_sector', '섹터')}${inp('eu_target', '매수 목표가')}${inp('eu_fair', '적정가')}${inp('eu_note', '산출근거 (예: PER 8배)')}</div>
+          <div style="margin-top:6px">${inp('eu_point', '투자포인트')}</div><div style="margin-top:6px">${inp('eu_risk', '리스크')}</div>
+          ${btn('addUni()', '+ 유니버스에 추가')}</div>
+        <div class="section" style="margin-bottom:12px"><h3>포트폴리오 (${_editP.length})</h3>${pList}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">${inp('ep_name', '종목명 *')}${inp('ep_code', '종목코드 *')}${inp('ep_date', '매수일 (YYYY-MM-DD)')}${inp('ep_price', '매수가')}${inp('ep_qty', '수량')}${inp('ep_target', '목표가')}</div>
+          <div style="margin-top:6px">${inp('ep_memo', '메모')}</div>${btn('addPf()', '+ 포트폴리오에 추가')}</div>
+        <button onclick="genValueJSON()" style="width:100%;padding:10px;background:#231c0e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">value_universe.json 생성 →</button>
+        <div id="vjsonWrap" style="display:none;margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;color:#64748b">아래 전체를 복사해 GitHub 파일에 <b>전체 교체</b> 후 커밋하세요.</span><button id="vcopy" onclick="copyValueJSON()" style="padding:4px 12px;background:#9d8449;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">복사</button></div>
+          <textarea id="vjson" readonly style="width:100%;height:180px;font-family:ui-monospace,monospace;font-size:11px;padding:8px;border:1px solid #e3dcc8;border-radius:6px;background:#faf8f2;box-sizing:border-box"></textarea>
+          <a href="https://github.com/nexusassetfund-boop/nexus-platform/edit/main/value_universe.json" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:#2563eb;font-size:12px;text-decoration:none">→ GitHub에서 value_universe.json 편집 열기 (전체 선택 후 붙여넣기 → Commit)</a>
+        </div>`;
+    }
 
     function renderValUniverse(list) {
       const el = document.getElementById('valUniverse');
