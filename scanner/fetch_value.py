@@ -8,10 +8,12 @@
 DART 키가 없으면 재무는 비우고 입력값만 내보낸다(로컬 문법검증 등).
 """
 from __future__ import annotations
+import html as _html
 import io
 import json
 import logging
 import os
+import re
 import urllib.request
 import urllib.error
 import zipfile
@@ -214,6 +216,28 @@ def _company(corp: str) -> dict:
     return info
 
 
+def _fnguide_business(code: str) -> dict:
+    """FnGuide Snapshot의 'Business Summary'(사업 설명 + 최근 실적) 추출."""
+    url = f"https://wcomp.fnguide.com/CompanyInfo/Snapshot?c_id=AA&menu_type=01&cmp_cd={code}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=25) as r:
+            page = r.read().decode("utf-8", "replace")
+    except Exception as e:
+        logger.warning("FnGuide 조회 실패 %s: %s", code, e)
+        return {}
+    m = re.search(r'id="bizSummaryDate">\[([^\]]*)\](.*?)(?:업종\s*비교|단위\s*:)', page, re.S)
+    if not m:
+        return {}
+    body = re.sub(r"<!--.*?-->", " ", m.group(2), flags=re.S)  # HTML 주석 제거
+    txt = re.sub(r"<[^>]+>", " ", body)
+    txt = _html.unescape(txt)
+    txt = txt.replace("<", " ").replace(">", " ")  # 엔티티 복원으로 생긴 잔여 부등호 제거
+    txt = re.sub(r"\s+", " ", txt).strip()
+    txt = re.sub(r"\s*[!<>\-]{2,}\s*$", "", txt).strip()  # 꼬리 주석 잔재 제거
+    return {"date": m.group(1).strip(), "text": txt} if txt else {}
+
+
 def _enrich(rec: dict) -> dict:
     code = rec.get("code", "")
     corp = _corp_map().get(code)
@@ -223,7 +247,7 @@ def _enrich(rec: dict) -> dict:
     out["metrics"] = fin.get("metrics", {})
     out["quality_score"] = _quality_score(fin.get("metrics", {}))
     out["company"] = _company(corp) if corp else {}
-    out["business"] = rec.get("business", "")  # 사업 영역 (직접 작성)
+    out["biz_summary"] = _fnguide_business(code)  # FnGuide Business Summary
     return out
 
 
