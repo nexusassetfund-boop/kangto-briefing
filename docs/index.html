@@ -1166,21 +1166,20 @@
       const el = document.getElementById('valUniverse');
       if (!list.length) { el.innerHTML = _valEmpty('유니버스가 비어있습니다 — value_universe.json에 추가하세요'); return; }
       const rows = [...list].sort((a, b) => ((b.f_score && b.f_score.score) ?? -1) - ((a.f_score && a.f_score.score) ?? -1)).map(u => {
-        const m = u.metrics || {}, vp = _valPrice[u.code] || {};
+        const vp = _valPrice[u.code] || {};
         const watchChip = (vp.watch && vp.watch.length) ? '<span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 align-middle">저평가</span>' : '';
-        return `<tr class="border-b border-[#f0ece0] last:border-0 hover:bg-[#f6f3ea] align-top cursor-pointer" onclick="openValueDetail('${_esc(u.code)}')">
+        return `<tr class="border-b border-[#f0ece0] last:border-0 hover:bg-[#f6f3ea] cursor-pointer" onclick="openValueDetail('${_esc(u.code)}')">
           <td class="px-4 py-3.5 text-center">${_fBadge(u.f_score)}</td>
-          <td class="px-3 py-3.5"><span class="font-bold text-nexus-ink hover:text-blue-700">${_esc(u.name)}</span><span class="text-[10px] text-slate-400 ml-1.5">${_esc(u.code)}</span>${watchChip}<div class="text-[11px] text-slate-400">${_esc(u.sector)}</div></td>
-          <td class="px-3 py-3.5 text-right ${m.roe >= 15 ? 'text-red-500 font-semibold' : 'text-slate-700'}">${_mNum(m.roe, '%')}</td>
-          <td class="px-3 py-3.5 text-right text-slate-700">${_mNum(m.op_margin, '%')}</td>
-          <td class="px-3 py-3.5 text-right ${m.debt_ratio > 150 ? 'text-blue-600' : 'text-slate-600'}">${_mNum(m.debt_ratio, '%')}</td>
-          <td class="px-3 py-3.5 text-right text-slate-600">${u.target_price ? u.target_price.toLocaleString() : '-'}</td>
-          <td class="px-3 py-3.5 text-right font-semibold text-slate-800">${vp.price ? vp.price.toLocaleString() : '-'}</td>
-          <td class="px-3 py-3.5 text-right font-bold ${_mCls(vp.upside)}">${vp.upside != null ? (vp.upside > 0 ? '+' : '') + vp.upside + '%' : '-'}</td>
-          <td class="px-4 py-3.5 text-[11px] text-slate-500 whitespace-normal max-w-[260px]"><div>${_esc(u.point)}</div>${u.risk ? `<div class="text-red-400 mt-0.5">⚠ ${_esc(u.risk)}</div>` : ''}</td>
+          <td class="px-3 py-3.5 text-[11px] text-slate-500">${_esc(u.sector) || '-'}</td>
+          <td class="px-3 py-3.5"><span class="font-bold text-nexus-ink hover:text-blue-700">${_esc(u.name)}</span><span class="text-[10px] text-slate-400 ml-1.5">${_esc(u.code)}</span>${watchChip}</td>
+          <td class="px-3 py-3.5 text-right font-semibold text-slate-800">${_plain(vp.price)}</td>
+          <td class="px-3 py-3.5 text-right ${_pfCls(vp.change_pct)}">${vp.change_pct != null ? _pfPct(vp.change_pct) : '-'}</td>
+          <td class="px-3 py-3.5 text-right text-slate-600">${_esc(vp.per) || '-'}</td>
+          <td class="px-3 py-3.5 text-right text-slate-500 text-xs">${_esc(vp.mktcap) || '-'}</td>
+          <td class="px-4 py-3.5 text-right text-slate-400 text-xs">${vp.low52 ? _plain(vp.low52) + '~' + _plain(vp.high52) : '-'}</td>
         </tr>`;
       }).join('');
-      el.innerHTML = _valTable(['F-Score', '종목', 'ROE', '영업이익률', '부채비율', '목표가', '현재가', '상승여력', '투자포인트 / 리스크'], rows, [2, 0, 1, 1, 1, 1, 1, 1, 0]);
+      el.innerHTML = _valTable(['F-Score', '섹터', '종목', '현재가', '등락률', 'PER', '시총', '52주 저~고'], rows, [2, 0, 0, 1, 1, 1, 1, 1]);
     }
 
     function renderValPortfolio(list) {

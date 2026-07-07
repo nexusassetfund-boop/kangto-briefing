@@ -400,6 +400,24 @@ async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
             m["target"] = r["target_price"]
         if r.get("fair_value") is not None:
             m["fair"] = r["fair_value"]
+    # PER·시총 (pykrx, 최근 영업일) — 실패해도 나머지는 진행
+    per_map, cap_map = {}, {}
+    try:
+        from pykrx import stock as _pykrx
+        for back in range(0, 6):
+            d = (dt.datetime.now(tz=KST).date() - dt.timedelta(days=back)).strftime("%Y%m%d")
+            fdf = _pykrx.get_market_fundamental_by_ticker(d)
+            if fdf is not None and len(fdf):
+                per_map = {str(t).zfill(6): fdf.loc[t, "PER"] for t in fdf.index}
+                try:
+                    cdf = _pykrx.get_market_cap_by_ticker(d)
+                    cap_map = {str(t).zfill(6): cdf.loc[t, "시가총액"] for t in cdf.index}
+                except Exception:
+                    pass
+                break
+    except Exception as e:
+        logger.warning("pykrx 밸류 지표 실패(무시): %s", e)
+
     items: dict = {}
     for code, m in meta.items():
         df = ohlcv_map.get(code)
@@ -411,6 +429,11 @@ async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
         if df is None or df.empty:
             continue
         price = realtime.get(code) or float(df.iloc[-1]["close"])
+        change_pct = round((float(df.iloc[-1]["close"]) / float(df.iloc[-2]["close"]) - 1) * 100, 2) if len(df) >= 2 and float(df.iloc[-2]["close"]) else None
+        per_v = per_map.get(code)
+        per_str = f"{round(float(per_v), 1)}x" if (per_v and float(per_v) > 0) else None
+        cap_v = cap_map.get(code)
+        mktcap_str = f"{round(cap_v / 1e8):,}억" if cap_v else None
         tail = df.tail(250)
         high52 = float(tail["high"].max())
         low52 = float(tail["low"].min())
@@ -426,7 +449,8 @@ async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
         if near_low:
             watch.append("52주 저점 근접")
         items[code] = {
-            "price": round(price), "high52": round(high52), "low52": round(low52),
+            "price": round(price), "change_pct": change_pct, "per": per_str, "mktcap": mktcap_str,
+            "high52": round(high52), "low52": round(low52),
             "upside": upside, "margin": margin, "near_low": near_low, "watch": watch,
         }
     _save_json(DATA_DIR / "value_price.json",
