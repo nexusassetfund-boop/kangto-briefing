@@ -1079,18 +1079,19 @@
         || (_valData?.portfolio || []).find(x => x.code === code);
       modal.classList.add('open');
       if (!rec) { content.innerHTML = '<p style="padding:24px;color:#8b8fa3;font-size:13px">데이터가 없습니다.</p>'; return; }
-      const c = rec.company || {}, m = rec.metrics || {};
+      const c = rec.company || {}, m = rec.metrics || {}, bs = rec.biz_summary || {};
+      const esc = s => (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const row = (k, v) => v ? `<div class="metric-row"><span class="k">${k}</span><span class="v">${v}</span></div>` : '';
-      const hp = c.homepage ? `<a href="https://${c.homepage.replace(/^https?:\/\//, '')}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:none">${c.homepage}</a>` : '';
+      const hp = c.homepage ? `<a href="https://${esc(c.homepage.replace(/^https?:\/\//, ''))}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:none">${esc(c.homepage)}</a>` : '';
       content.innerHTML = `
-        <h2>${rec.name} <span style="color:#8b8fa3;font-size:14px">${rec.code}</span>
+        <h2>${esc(rec.name)} <span style="color:#8b8fa3;font-size:14px">${esc(rec.code)}</span>
           ${rec.quality_score != null ? `<span class="badge" style="background:rgba(157,132,73,.18);color:#8a7238">퀄리티 ${rec.quality_score}</span>` : ''}
         </h2>
         <div class="section" style="margin-bottom:12px">
           <h3>기업개요</h3>
-          ${row('섹터', rec.sector)}${row('대표이사', c.ceo)}${row('설립', c.est)}${row('시장', c.market)}${row('홈페이지', hp)}${row('주소', c.address)}
+          ${row('섹터', esc(rec.sector))}${row('대표이사', esc(c.ceo))}${row('설립', esc(c.est))}${row('시장', esc(c.market))}${row('홈페이지', hp)}${row('주소', esc(c.address))}
+          ${bs.text ? `<div style="font-size:12.5px;color:#334155;line-height:1.7;margin-top:10px;padding-top:10px;border-top:1px solid #f0ebdd">${esc(bs.text)}${bs.date ? `<div style="font-size:10px;color:#94a3b8;margin-top:6px">FnGuide Business Summary · ${esc(bs.date)}</div>` : ''}</div>` : ''}
         </div>
-        ${rec.business ? `<div class="section" style="margin-bottom:12px"><h3>사업 영역</h3><div style="font-size:12.5px;color:#334155;line-height:1.65">${rec.business}</div></div>` : ''}
         <div class="detail-2col">
           <div class="section"><h3>퀄리티 지표</h3>
             ${row('ROE', m.roe != null ? m.roe + '%' : '')}${row('영업이익률', m.op_margin != null ? m.op_margin + '%' : '')}
@@ -1099,11 +1100,13 @@
           </div>
           <div class="section"><h3>밸류에이션 / 논리</h3>
             ${row('목표가', rec.target_price ? rec.target_price.toLocaleString() + '원' : '')}${row('적정가', rec.fair_value ? rec.fair_value.toLocaleString() + '원' : '')}
-            ${row('산출근거', rec.note)}${row('투자포인트', rec.point)}${row('리스크', rec.risk)}
+            ${row('산출근거', esc(rec.note))}${row('투자포인트', esc(rec.point))}${row('리스크', esc(rec.risk))}
           </div>
         </div>
         <div class="section"><h3>재무 5년 추이</h3>${_finBarChart(rec.financials || [])}</div>`;
     }
+
+    const _finFmt = v => v == null ? '-' : Math.abs(v) >= 1e12 ? (v / 1e12).toFixed(1) + '조원' : Math.round(v / 1e8).toLocaleString() + '억원';
 
     function _finBarChart(tr) {
       if (!tr.length) return '';
@@ -1114,10 +1117,10 @@
       const n = tr.length, gw = (W - P.l - P.r) / n, bw = gw / (keys.length + 1);
       const y0 = P.t + (H - P.t - P.b) * (max / rng);
       const Y = v => P.t + (H - P.t - P.b) * ((max - v) / rng);
-      const bars = tr.map((t, i) => keys.map(([k, , c], j) => {
+      const bars = tr.map((t, i) => keys.map(([k, lbl, c], j) => {
         const v = t[k]; if (v == null) return '';
         const x = P.l + gw * i + bw * (j + 0.5), y = Y(v), h = Math.abs(y - y0);
-        return `<rect x="${x.toFixed(1)}" y="${Math.min(y, y0).toFixed(1)}" width="${(bw * 0.8).toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" fill="${c}" rx="1"/>`;
+        return `<rect x="${x.toFixed(1)}" y="${Math.min(y, y0).toFixed(1)}" width="${(bw * 0.8).toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" fill="${c}" rx="1" style="cursor:pointer"><title>'${String(t.year).slice(2)} ${lbl}: ${_finFmt(v)}</title></rect>`;
       }).join('')).join('');
       const xlab = tr.map((t, i) => `<text x="${(P.l + gw * i + gw / 2).toFixed(1)}" y="${H - 5}" font-size="9" fill="#94a3b8" text-anchor="middle">'${String(t.year).slice(2)}</text>`).join('');
       const legend = keys.map(([, lbl, c]) => `<span class="flex items-center gap-1"><span style="width:10px;height:3px;background:${c};display:inline-block"></span>${lbl}</span>`).join('');
