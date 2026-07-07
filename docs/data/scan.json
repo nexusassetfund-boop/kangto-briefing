@@ -1,5 +1,5 @@
 {
- "scan_time": "2026-07-07T16:14:13+09:00",
+ "scan_time": "2026-07-07T17:31:10+09:00",
  "universe_size": 350,
  "scanned": 350,
  "kospi": {
@@ -11,7 +11,7 @@
   "ma50_declining": false,
   "exit_signal": false,
   "entry_allowed": true,
-  "updated": "2026-07-07T16:14:13+09:00"
+  "updated": "2026-07-07T17:31:10+09:00"
  },
  "results": [
   {
@@ -680,7 +680,7 @@
    "ma200_rising": true,
    "rs_rank": 84.8,
    "rs_momentum": 1.8,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "고무제품 제조업",
    "sector_rs": 0.0,
    "ma_aligned": true,
@@ -707,7 +707,6 @@
    "signals": [
     "MTT 통과",
     "RS 85 — 상위 강세",
-    "RS 신고점",
     "MA 정배열, 저점 대비 +25.4%"
    ],
    "change_pct": 5.11,
@@ -817,7 +816,7 @@
    "ma200_rising": true,
    "rs_rank": 79.7,
    "rs_momentum": 3.7,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기타 화학제품 제조업",
    "sector_rs": 0.0,
    "ma_aligned": true,
@@ -843,7 +842,6 @@
    "scan_date": "2026-07-07",
    "signals": [
     "MTT 통과",
-    "RS 신고점",
     "MA 정배열, 저점 대비 +29.9%"
    ],
    "change_pct": 5.5,
@@ -1852,7 +1850,7 @@
    "ma200_rising": true,
    "rs_rank": 70.9,
    "rs_momentum": 6.9,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "컴퓨터 프로그래밍, 시스템 통합 및 관리업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -1878,7 +1876,6 @@
    "scan_date": "2026-07-07",
    "signals": [
     "MTT 통과",
-    "RS 신고점",
     "MA 정배열 아님"
    ],
    "change_pct": 6.05,
@@ -2304,7 +2301,7 @@
    "ma200_rising": true,
    "rs_rank": 82.8,
    "rs_momentum": 0.8,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기타 금융업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -2331,7 +2328,6 @@
    "signals": [
     "MTT 통과",
     "RS 83 — 상위 강세",
-    "RS 신고점",
     "MA 정배열 아님"
    ],
    "change_pct": 2.56,
@@ -2667,7 +2663,7 @@
    "ma200_rising": true,
    "rs_rank": 75.7,
    "rs_momentum": 4.7,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기타 금융업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -2693,7 +2689,6 @@
    "scan_date": "2026-07-07",
    "signals": [
     "MTT 통과",
-    "RS 신고점",
     "MA 정배열 아님"
    ],
    "change_pct": -0.4,
@@ -5329,7 +5324,7 @@
    "ma200_rising": true,
    "rs_rank": 52.8,
    "rs_momentum": 2.8,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기타 운송관련 서비스업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -6724,7 +6719,7 @@
    "ma200_rising": true,
    "rs_rank": 42.8,
    "rs_momentum": 2.8,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기초 화학물질 제조업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -8514,7 +8509,7 @@
    "ma200_rising": true,
    "rs_rank": 54.7,
    "rs_momentum": 11.7,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기타 금융업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -11576,7 +11571,7 @@
    "ma200_rising": true,
    "rs_rank": 60.7,
    "rs_momentum": 1.7,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "측정, 시험, 항해, 제어 및 기타 정밀기기 제조업; 광학기기 제외",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -14774,7 +14769,7 @@
    "ma200_rising": true,
    "rs_rank": 53.6,
    "rs_momentum": 6.6,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "일차전지 및 이차전지 제조업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -15342,7 +15337,7 @@
    "ma200_rising": false,
    "rs_rank": 7.7,
    "rs_momentum": 0.0,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기타 금속 가공제품 제조업",
    "sector_rs": 0.0,
    "ma_aligned": false,
