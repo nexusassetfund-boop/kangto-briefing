@@ -652,7 +652,7 @@
 
       <div class="flex flex-wrap border-b border-[#ded7c4] mb-6">
         <button id="val-tab-btn-universe" onclick="switchValTab('universe')" class="px-5 py-3 text-sm font-bold text-nexus-ink border-b-2 border-nexus-ink -mb-px">밸류 유니버스</button>
-        <button id="val-tab-btn-portfolio" onclick="switchValTab('portfolio')" class="px-5 py-3 text-sm font-medium text-slate-400 hover:text-blue-800 border-b-2 border-transparent -mb-px transition-colors">포트폴리오</button>
+        <button id="val-tab-btn-portfolio" onclick="switchValTab('portfolio')" class="px-5 py-3 text-sm font-medium text-slate-400 hover:text-blue-800 border-b-2 border-transparent -mb-px transition-colors">보유 종목</button>
         <span class="ml-auto self-center text-[11px] text-slate-400 hidden sm:inline">종목 클릭 → 기업개요·사업영역·재무추이</span>
       </div>
 
@@ -1187,19 +1187,23 @@
       const el = document.getElementById('valPortfolio');
       if (!list.length) { el.innerHTML = _valEmpty('보유 종목이 없습니다'); return; }
       const rows = list.map(p => {
-        const m = p.metrics || {};
+        const vpp = _valPrice[p.code] || {};
+        const price = vpp.price;
+        const ret = (price && p.buy_price) ? (price / p.buy_price - 1) * 100 : null;
+        const pnl = (price != null && p.buy_price != null && p.qty != null) ? (price - p.buy_price) * p.qty : null;
+        const days = p.buy_date ? Math.floor((Date.now() - new Date(p.buy_date).getTime()) / 86400000) : null;
         return `<tr class="border-b border-[#f0ece0] last:border-0 hover:bg-[#f6f3ea] cursor-pointer" onclick="openValueDetail('${_esc(p.code)}')">
           <td class="px-4 py-3.5 text-center">${_fBadge(p.f_score)}</td>
           <td class="px-3 py-3.5"><span class="font-bold text-nexus-ink hover:text-blue-700">${_esc(p.name)}</span><span class="text-[10px] text-slate-400 ml-1.5">${_esc(p.code)}</span></td>
-          <td class="px-3 py-3.5 text-slate-500 text-xs">${_esc(p.buy_date) || '-'}</td>
-          <td class="px-3 py-3.5 text-right text-slate-600">${p.buy_price ? p.buy_price.toLocaleString() : '-'}</td>
-          <td class="px-3 py-3.5 text-right text-slate-600">${p.qty ?? '-'}</td>
-          <td class="px-3 py-3.5 text-right text-slate-600">${p.target_price ? p.target_price.toLocaleString() : '-'}</td>
-          <td class="px-3 py-3.5 text-right ${m.roe >= 15 ? 'text-red-500' : 'text-slate-600'}">${_mNum(m.roe, '%')}</td>
+          <td class="px-3 py-3.5 text-right font-semibold text-slate-800">${price ? price.toLocaleString() : '-'}</td>
+          <td class="px-3 py-3.5 text-right text-slate-500">${p.buy_price ? p.buy_price.toLocaleString() : '-'}</td>
+          <td class="px-3 py-3.5 text-right font-semibold ${_mCls(pnl)}">${pnl != null ? (pnl > 0 ? '+' : '') + Math.round(pnl).toLocaleString() + '원' : '-'}</td>
+          <td class="px-3 py-3.5 text-right font-extrabold ${_mCls(ret)}">${ret != null ? (ret > 0 ? '+' : '') + ret.toFixed(2) + '%' : '-'}</td>
+          <td class="px-3 py-3.5 text-center">${days != null ? `<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">${days}일</span>` : '-'}</td>
           <td class="px-4 py-3.5 text-[11px] text-slate-400">${_esc(p.memo)}</td>
         </tr>`;
       }).join('');
-      el.innerHTML = _valTable(['F-Score', '종목', '매수일', '매수가', '수량', '목표가', 'ROE', '메모'], rows, [2, 0, 0, 1, 1, 1, 1, 0]);
+      el.innerHTML = _valTable(['F-Score', '종목', '현재가', '매수가', '평가손익', '수익률', '보유일', '메모'], rows, [2, 0, 1, 1, 1, 1, 2, 0]);
     }
 
     // 종목 클릭 → 상세(기업개요·사업영역·퀄리티·재무추이) 모달
@@ -1352,9 +1356,10 @@
           <td class="px-3 py-3.5 text-right text-slate-500">${_plain(h.avg_price)}</td>
           <td class="px-3 py-3.5 text-right font-semibold ${_pfCls(h.eval_pnl)}">${_signWon(h.eval_pnl)}</td>
           <td class="px-3 py-3.5 text-right font-extrabold ${_pfCls(h.return_pct)}">${_pfPct(h.return_pct)}</td>
-          <td class="px-4 py-3.5 text-right text-slate-600">${_esc(h.weight) || '-'}</td>
+          <td class="px-3 py-3.5 text-right text-slate-600">${_esc(h.weight) || '-'}</td>
+          <td class="px-4 py-3.5 text-center">${h.hold_days != null ? `<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">${Math.round(h.hold_days)}일</span>` : '-'}</td>
         </tr>`).join('');
-      el.innerHTML = _pfTableWrap(['전략', '종목', '현재가', '등락률', '평균매입가', '평가손익', '수익률', '비중'], rows, [0, 0, 1, 1, 1, 1, 1, 1]);
+      el.innerHTML = _pfTableWrap(['전략', '종목', '현재가', '등락률', '평균매입가', '평가손익', '수익률', '비중', '보유일'], rows, [0, 0, 1, 1, 1, 1, 1, 1, 2]);
     }
 
     function renderPfUniverse(list) {
