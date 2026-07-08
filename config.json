@@ -42,6 +42,11 @@
     "wedge_reversal_dd_pct": 15,
     "wedge_vol_dry_ratio": 0.8,
     "wedge_drop_vol_ratio": 1.5,
+    "tp_r_multiple": 3.0,
+    "tp_fast_days": 5,
+    "tp_partial_frac": 0.5,
+    "exhaustion_ext_pct": 20,
+    "tp_min_frac": 0.1,
     "ma_periods": [
       5,
       20,
