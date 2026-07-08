@@ -477,6 +477,52 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
     return {"holdings": new_holdings, "exited": exited}
 
 
+# ── 트랙별 누적 수익률 히스토리 (전략 포트폴리오 차트) ─────────
+# 트레이드당 동일 비중(1단위) 가정, 수익률(%p) 단순 합산.
+#   - 최초 실행: 현존 이탈 기록으로 과거 실현 누적 곡선을 백필 (당시 보유 평가손익은 소급 불가)
+#   - 이후 매 장마감: (전일까지 실현 누적 + 오늘 실현 + 보유 평가손익) 스냅샷을 1점 추가
+#   실현 누적 베이스(cum_base)는 메타에 확정 저장 — 이탈 기록이 180일 보존정책으로
+#   잘려나가도 과거 누적치가 함께 꺼지지 않는다. 같은 날 재실행은 오늘 점만 갱신(멱등).
+def _update_track_history(state: dict, ledger: dict):
+    today_str = dt.date.today().isoformat()
+    hist = state.setdefault("track_history", {})
+    meta = state.setdefault("track_history_meta", {})
+    for tid in (3, 1):
+        key = str(tid)
+        ex = [e for e in ledger.get("exited", [])
+              if e.get("entry_stage", 3) == tid and e.get("exit_date")]
+        series = hist.get(key) or []
+        m = meta.get(key)
+        if m is None:
+            # 백필: 이탈 기록을 날짜순 누적 → 과거 곡선 생성, 오늘 이전까지를 베이스로 확정
+            cum, by_date = 0.0, {}
+            for e in sorted(ex, key=lambda e: e["exit_date"]):
+                cum += float(e.get("return_pct") or 0)
+                by_date[e["exit_date"]] = cum
+            series = [{"date": d, "cum": round(c, 2)} for d, c in sorted(by_date.items())
+                      if d < today_str]
+            cum_base = series[-1]["cum"] if series else 0.0
+        else:
+            cum_base = float(m.get("cum_base", 0.0))
+            last_date = m.get("last_date", "")
+            if last_date < today_str:
+                # 지난 실행일 이후~어제 사이 이탈분을 베이스에 확정 반영
+                cum_base += sum(float(e.get("return_pct") or 0) for e in ex
+                                if last_date <= e["exit_date"] < today_str)
+        today_realized = sum(float(e.get("return_pct") or 0) for e in ex
+                             if e["exit_date"] == today_str)
+        open_pnl = sum(float(h.get("total_return_pct", h.get("return_pct", 0)) or 0)
+                       for h in ledger.get("holdings", [])
+                       if h.get("entry_stage", 3) == tid)
+        point = {"date": today_str, "cum": round(cum_base + today_realized + open_pnl, 2)}
+        if series and series[-1]["date"] == today_str:
+            series[-1] = point
+        else:
+            series.append(point)
+        hist[key] = series[-250:]
+        meta[key] = {"cum_base": round(cum_base, 2), "last_date": today_str}
+
+
 # ── 가치투자 시세/저평가 워치 (장마감 스냅샷) ──────────────────
 async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
     """value_universe.json 종목의 현재가·52주·상승여력·안전마진·저평가 워치를
@@ -659,6 +705,7 @@ async def main():
     if is_close_run:
         ledger = _update_ledger(ledger, results, kospi, params)
         state["ledger"] = ledger
+        _update_track_history(state, ledger)
         logger.info("장마감 이후 실행 — 전략 포트폴리오 갱신")
     else:
         logger.info("장중 실행 — 전략 포트폴리오는 직전 마감 상태 유지 (감지기만 갱신)")
@@ -688,6 +735,7 @@ async def main():
             "kospi": kospi,
             "holdings": ledger["holdings"],
             "exited": ledger["exited"],
+            "track_history": state.get("track_history", {}),
             "stats": {
                 "holding_count": len(ledger["holdings"]),
                 "exited_count": len(ledger["exited"]),

@@ -896,6 +896,7 @@
     }
 
     let _ledgerRecords = [];
+    let _trackHistory = {};
     function renderLedgerDetail(h, content) {
       const row = (k, v) => v || v === 0 ? `<div class="metric-row"><span class="k">${k}</span><span class="v">${v}</span></div>` : '';
       const rCls = h.return_pct > 0.005 ? 'badge-s3' : h.return_pct < -0.005 ? 'badge-s1' : 'badge-none';
@@ -1489,6 +1490,7 @@
         const data = await resp.json();
         _ledgerUpdated = data.updated ? new Date(data.updated) : new Date();
         _ledgerRecords = [...(data.holdings || []), ...(data.exited || [])];
+        _trackHistory = data.track_history || {};
         renderLedgerHeaderStats(data.stats || {});
         renderKospiStatusBanner(data.kospi || {});
         renderHoldings(data.holdings || []);
@@ -1615,10 +1617,6 @@
 
     function renderHoldings(list) {
       const el = document.getElementById('ledgerHoldings');
-      if (!list.length) {
-        el.innerHTML = '<div class="bg-white rounded-2xl border border-[#eae5d8] py-12 text-center text-slate-400 text-sm">현재 보유(편입) 종목이 없습니다 — 돌파(신고가) / 모멘텀(웨지 팝) 신호 시 자동 편입됩니다</div>';
-        return;
-      }
       el.innerHTML = STAGE_TRACKS.map(t => {
         const rows = _stageGroup(list, t.stage);
         return `
@@ -1632,9 +1630,125 @@
           ${rows.length
             ? _ledgerTable(rows.map(h => _holdingRow(h, t.dot)).join(''), '현재가')
             : '<div class="bg-white rounded-2xl border border-[#eae5d8] py-8 text-center text-slate-400 text-sm">보유 종목 없음</div>'}
+          ${_trackChartCard(t.stage)}
         </div>`;
       }).join('');
+      requestAnimationFrame(() => STAGE_TRACKS.forEach(t => _drawTrackChart(t.stage)));
     }
+
+    // ── 트랙별 누적 수익률 차트 (실현 + 보유 평가, 트레이드당 동일 비중 %p 합산) ──
+    const TRACK_LINE = { 3: '#96731a', 1: '#3b82f6' };  // 돌파=골드, 모멘텀=블루 (팔레트 검증 통과)
+
+    function _trackChartCard(stage) {
+      const series = _trackHistory[String(stage)] || [];
+      if (series.length < 2) {
+        return `<div class="bg-white rounded-2xl border border-[#eae5d8] shadow-sm mt-3 px-4 py-3 text-[12px] text-slate-400">
+          누적 수익률 차트 — 데이터 수집 중 (장마감마다 1점씩 쌓입니다${series.length ? ` · 현재 ${_retTxt(series[series.length-1].cum)}` : ''})</div>`;
+      }
+      return `
+      <div class="bg-white rounded-2xl border border-[#eae5d8] shadow-sm mt-3 px-4 pt-3 pb-2 relative">
+        <div class="flex items-center justify-between gap-2 mb-1 flex-wrap">
+          <span class="text-[11px] font-bold text-slate-400">누적 수익률 — 실현 + 보유 평가 <span class="font-medium">(트레이드당 동일 비중 · %p 합산 · 장마감 기준)</span></span>
+          <span class="text-[13px] font-extrabold ${_retCls(series[series.length-1].cum)}" style="font-variant-numeric:tabular-nums">${_retTxt(series[series.length-1].cum)}</span>
+        </div>
+        <canvas id="trackChart${stage}" class="w-full block cursor-crosshair"></canvas>
+        <div id="trackTip${stage}" class="hidden absolute z-10 pointer-events-none bg-nexus-ink text-white text-[11px] px-2 py-1 rounded-lg shadow-lg whitespace-nowrap" style="font-variant-numeric:tabular-nums"></div>
+      </div>`;
+    }
+
+    function _drawTrackChart(stage, hoverIdx) {
+      const series = _trackHistory[String(stage)] || [];
+      const cv = document.getElementById('trackChart' + stage);
+      if (!cv || series.length < 2) return;
+      const W = cv.parentElement.clientWidth - 32, H = 150;   // px-4 패딩 제외
+      const dpr = window.devicePixelRatio || 1;
+      cv.width = W * dpr; cv.height = H * dpr;
+      cv.style.height = H + 'px';
+      const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+
+      const padL = 8, padR = 14, padT = 14, padB = 20;
+      const vals = series.map(p => p.cum);
+      let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+      const span = (hi - lo) || 1; lo -= span * 0.08; hi += span * 0.08;
+      const X = i => padL + (W - padL - padR) * (series.length === 1 ? 0.5 : i / (series.length - 1));
+      const Y = v => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
+      const color = TRACK_LINE[stage] || '#64748b';
+
+      // 0% 기준선 (점선, 리세시브)
+      const y0 = Y(0);
+      ctx.strokeStyle = '#ddd6c6'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(padL, y0); ctx.lineTo(W - padR, y0); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#a8a29a'; ctx.font = '10px Inter, sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText('0%', padL, y0 - 4);
+
+      // 면 채움 (기준선까지, 저채도)
+      ctx.beginPath(); ctx.moveTo(X(0), y0);
+      series.forEach((p, i) => ctx.lineTo(X(i), Y(p.cum)));
+      ctx.lineTo(X(series.length - 1), y0); ctx.closePath();
+      ctx.fillStyle = color + '14'; ctx.fill();
+
+      // 라인 (2px)
+      ctx.beginPath();
+      series.forEach((p, i) => i ? ctx.lineTo(X(i), Y(p.cum)) : ctx.moveTo(X(i), Y(p.cum)));
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // 끝점 강조 (2px 흰 링)
+      const li = series.length - 1;
+      ctx.beginPath(); ctx.arc(X(li), Y(series[li].cum), 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+
+      // x축 날짜 라벨 (처음·끝)
+      ctx.fillStyle = '#a8a29a'; ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'left';  ctx.fillText(_dstr(series[0].date), padL, H - 6);
+      ctx.textAlign = 'right'; ctx.fillText(_dstr(series[li].date), W - padR, H - 6);
+
+      // 호버 크로스헤어 + 포인트
+      if (hoverIdx != null && series[hoverIdx]) {
+        const hx = X(hoverIdx), hy = Y(series[hoverIdx].cum);
+        ctx.strokeStyle = '#c8c2b2'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(hx, padT); ctx.lineTo(hx, H - padB); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.fill();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+      }
+
+      // 호버 핸들러 (1회 바인딩)
+      if (!cv._bound) {
+        cv._bound = true;
+        const tip = document.getElementById('trackTip' + stage);
+        cv.addEventListener('mousemove', e => {
+          const s = _trackHistory[String(stage)] || [];
+          if (s.length < 2) return;
+          const rect = cv.getBoundingClientRect();
+          const rx = e.clientX - rect.left;
+          const idx = Math.max(0, Math.min(s.length - 1,
+            Math.round((rx - padL) / ((rect.width - padL - padR) / (s.length - 1)))));
+          _drawTrackChart(stage, idx);
+          if (tip) {
+            tip.innerHTML = `${_dstr(s[idx].date)} · <b>${_retTxt(s[idx].cum)}</b>`;
+            tip.classList.remove('hidden');
+            const wrapRect = cv.parentElement.getBoundingClientRect();
+            const tx = Math.min(Math.max(e.clientX - wrapRect.left + 12, 4), wrapRect.width - tip.offsetWidth - 4);
+            tip.style.left = tx + 'px';
+            tip.style.top = (e.clientY - wrapRect.top - 30) + 'px';
+          }
+        });
+        cv.addEventListener('mouseleave', () => {
+          _drawTrackChart(stage);
+          if (tip) tip.classList.add('hidden');
+        });
+      }
+    }
+
+    // 리사이즈 시 차트 재드로잉
+    window.addEventListener('resize', () => {
+      if (_currentView === 'dashboard' && _detectorTab === 'ledger')
+        STAGE_TRACKS.forEach(t => _drawTrackChart(t.stage));
+    });
 
     function renderExited(list) {
       const el = document.getElementById('ledgerExited');
