@@ -255,11 +255,12 @@ def _update_stage_history(stage_history: dict, results: list[dict]):
 # 규칙 (config.json params 사용):
 #   편입: 스테이지별 독립 트랙 (스탁이지의 1호/2호 전략실 방식)
 #     - Stage 3 트랙: 돌파 + 신뢰도 stage3_entry_confidence(70)↑ — 피크 Easy식
-#     - Stage 1 트랙: 초기 추세 + 신뢰도 stage1_entry_confidence(75)↑ — 모멘텀 Easy식
+#     - Stage 1 트랙: 웨지 팝(10·20 EMA 동시 탈환 + 거래량 2~3x) + 신뢰도 stage1_entry_confidence(75)↑
 #     공통: KOSPI 진입 허용 + 클라이맥스 경고 없음. 같은 종목이 두 트랙에 각각 편입 가능.
 #   유지: 편입 후 스테이지가 흔들려도 원장에 유지 — 보유일은 리셋되지 않음
 #   이탈(트랙 공통): ① 고점 대비 trail_stop_pct 하락 (기본 -10%, 진입 직후엔 손절 겸용)
-#                    ② 추세 이탈: 종가 < exit_ma_period 이동평균 (기본 60일선)
+#                    ② 웨지 드롭: 대량 거래 동반 10·20 EMA 종가 하향 이탈 (Oliver Kell)
+#                    ③ 추세 이탈: 종가 < exit_ma_period 이동평균 (기본 60일선)
 def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict) -> dict:
     today = dt.date.today()
     today_str = today.isoformat()
@@ -301,6 +302,9 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
                 exit_reason = f"트레일링 스탑 (고점 대비 {trail_stop}%)"
             else:
                 exit_reason = f"손절 ({round(ret_pct, 2)}%)"
+        elif r and r.get("wedge_drop"):
+            # 웨지 드롭: 대량 거래 동반 10·20 EMA 종가 하향 이탈 → 추세 종료 (Oliver Kell)
+            exit_reason = "웨지 드롭 (대량 거래 + 10·20 EMA 이탈)"
         elif r and r.get(exit_ma_key) and price < float(r[exit_ma_key]):
             exit_reason = f"추세 이탈 ({exit_ma_key.upper()} 하회)"
 
