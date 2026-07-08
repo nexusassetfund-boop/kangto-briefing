@@ -37,6 +37,11 @@
     "vcp_contractions_min": 2,
     "vcp_contraction_threshold": 0.15,
     "stage1_rise_min_pct": 50,
+    "wedge_vol_surge": 2.0,
+    "wedge_ema_tight_pct": 0.035,
+    "wedge_reversal_dd_pct": 15,
+    "wedge_vol_dry_ratio": 0.8,
+    "wedge_drop_vol_ratio": 1.5,
     "ma_periods": [
       5,
       20,

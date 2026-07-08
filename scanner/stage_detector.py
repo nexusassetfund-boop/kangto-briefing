@@ -1,9 +1,16 @@
 """
 추세추종 스테이지 감지 엔진
 
-Stage 1: 1차 상승 — MA 정배열 + 저점 대비 50%↑ + RS≥70
+Stage 1: 웨지 팝 (Wedge Pop) — 반전 확장 후 저점 상승 + 10·20 EMA 압착 → 동시 탈환 + 거래량 2~3x
 Stage 2: 조정 베이스 — VCP (변동성·거래량 점진 축소)
 Stage 3: 돌파 재상승 — 전고점 돌파 + 거래량 200%↑ (매수 타점)
+
+편출 신호: 웨지 드롭 (Wedge Drop) — 대량 거래 동반 10·20 EMA 종가 하향 이탈
+
+Stage 1 근거: Oliver Kell의 웨지 팝 전략 (NotebookLM "Principles of Profitable
+Trading and Risk Management"). 하락 투매로 장기 이평선과 하방 이격된 뒤 직전 저점보다
+높은 저점을 형성하고, 10일·20일 EMA 이격이 수축(압착)하며 거래량이 마른 미니 베이스에서
+종가가 10·20 EMA를 동시에 강하게 탈환할 때(평소 대비 2~3배 거래량) 진입.
 
 추가: MTT 필터, 클라이맥스 감지, 포지션 사이징 (2% 룰)
 """
@@ -51,6 +58,19 @@ class StageResult:
     # Stage 1 지표
     rise_from_low_pct: float = 0.0       # 60일 저점 대비 상승률
 
+    # Stage 1 지표: 웨지 팝 (Wedge Pop)
+    ema10: float = 0.0
+    ema20: float = 0.0
+    wedge_pop: bool = False              # 웨지 팝 진입 시그널
+    wedge_reclaim: bool = False          # 10·20 EMA 동시 탈환
+    wedge_fresh: bool = False            # 당일 신규 탈환
+    wedge_vol_surge: float = 0.0         # 돌파 거래량 배수
+    ema_tight: bool = False              # 10-20 EMA 압착
+    higher_low: bool = False             # 저점 상승
+    reversal_ext: bool = False           # 반전 확장 후 반등
+    wedge_vol_dryup: bool = False        # 베이스 거래량 마름
+    wedge_drop: bool = False             # 웨지 드롭 편출 시그널
+
     # Stage 2 지표 (VCP)
     vcp_detected: bool = False
     contractions: int = 0                # 변동성 축소 횟수
@@ -88,6 +108,11 @@ def _sma(series: pd.Series, period: int) -> float:
 def _sma_series(series: pd.Series, period: int) -> pd.Series:
     """단순이동평균 시리즈"""
     return series.rolling(window=period, min_periods=period).mean()
+
+
+def _ema_series(series: pd.Series, period: int) -> pd.Series:
+    """지수이동평균(EMA) 시리즈 — 웨지 팝/드롭 판정용"""
+    return series.ewm(span=period, adjust=False).mean()
 
 
 def _detect_vcp(df: pd.DataFrame, params: dict) -> dict:
@@ -194,6 +219,105 @@ def _detect_breakout(df: pd.DataFrame, params: dict) -> dict:
         "gap_up": gap_up,
         "lookback_high": float(lookback_high),
     }
+
+
+def _detect_wedge_pop(df: pd.DataFrame, params: dict) -> dict:
+    """
+    웨지 팝 (Wedge Pop) 감지 — Stage 1 진입 시그널 (Oliver Kell)
+
+    셋업: 반전 확장(장기 이평선 대비 하방 이격) 후 직전 저점보다 높은 저점(Higher Low)을
+    형성하고, 10·20 EMA 이격이 수축(압착)하며 거래량이 마른 짧은 미니 베이스.
+    진입 트리거: 종가가 10일·20일 EMA를 동시에 상향 탈환(reclaim) + 거래량 평소 2~3배 폭증.
+
+    core(필수) = 10·20 EMA 동시 탈환 + 거래량 폭증 + 저점 상승
+    setup(보너스) = EMA 압착 · 반전 확장 · 거래량 마름 · 당일 신규 탈환
+    """
+    empty = {
+        "detected": False, "reclaim": False, "fresh_reclaim": False,
+        "vol_surge_ratio": 0.0, "ema_tight": False, "higher_low": False,
+        "reversal_ext": False, "vol_dryup": False, "stop_pct": -10.0,
+    }
+    if len(df) < 40:
+        return empty
+
+    closes = df["close"]
+    highs = df["high"].values
+    lows = df["low"].values
+    vols = df["volume"].values
+
+    ema10 = _ema_series(closes, 10)
+    ema20 = _ema_series(closes, 20)
+    cur = float(closes.iloc[-1])
+    e10 = float(ema10.iloc[-1])
+    e20 = float(ema20.iloc[-1])
+
+    # ── 진입 트리거: 10·20 EMA 동시 종가 탈환 ──
+    reclaim = cur > e10 and cur > e20
+    prev_close = float(closes.iloc[-2])
+    prev_below = prev_close <= max(float(ema10.iloc[-2]), float(ema20.iloc[-2]))
+    fresh_reclaim = reclaim and prev_below   # 갓 올라선 당일 신규 탈환
+
+    # ── 거래량 폭증 (돌파일, 평소 2~3x) ──
+    avg_vol = float(np.mean(vols[-25:-1])) if len(vols) >= 26 else float(np.mean(vols[:-1]))
+    surge = vols[-1] / avg_vol if avg_vol > 0 else 0.0
+    vol_surge = surge >= params.get("wedge_vol_surge", 2.0)
+
+    # ── 셋업1: 10-20 EMA 압착 (미니 베이스 구간 이격 수축) ──
+    spread = (ema10 - ema20).abs() / closes
+    base_spread = float(spread.iloc[-6:-1].mean()) if len(spread) >= 6 else 1.0
+    ema_tight = base_spread <= params.get("wedge_ema_tight_pct", 0.035)
+
+    # ── 셋업2: 저점 상승 (Higher Low) ──
+    recent_low = float(np.min(lows[-8:]))
+    prior_low = float(np.min(lows[-30:-8])) if len(lows) >= 30 else recent_low
+    higher_low = recent_low > prior_low
+
+    # ── 셋업3: 반전 확장 (직전 고점 대비 깊은 하락 후 반등) ──
+    prior_high = float(np.max(highs[-40:-8])) if len(highs) >= 40 else 0.0
+    drawdown = (prior_low / prior_high - 1) * 100 if prior_high > 0 else 0.0
+    reversal_ext = drawdown <= -params.get("wedge_reversal_dd_pct", 15)
+
+    # ── 셋업4: 거래량 마름 (돌파 직전 베이스) ──
+    base_vol = float(np.mean(vols[-6:-1])) if len(vols) >= 6 else avg_vol
+    vol_dryup = base_vol < avg_vol * params.get("wedge_vol_dry_ratio", 0.8)
+
+    # ── 초기 손절: 돌파 당일 저가 아래 (웨지 팝은 타이트 스탑) ──
+    day_low = float(lows[-1])
+    stop_pct = round((day_low / cur - 1) * 100, 1) if cur > 0 else -10.0
+    stop_pct = max(min(stop_pct, -1.0), -12.0)  # -1% ~ -12% 범위로 클램프
+
+    detected = reclaim and vol_surge and higher_low
+
+    return {
+        "detected": detected,
+        "reclaim": reclaim,
+        "fresh_reclaim": fresh_reclaim,
+        "vol_surge_ratio": round(surge, 2),
+        "ema_tight": ema_tight,
+        "higher_low": higher_low,
+        "reversal_ext": reversal_ext,
+        "vol_dryup": vol_dryup,
+        "stop_pct": stop_pct,
+    }
+
+
+def _detect_wedge_drop(df: pd.DataFrame, params: dict) -> bool:
+    """
+    웨지 드롭 (Wedge Drop) 감지 — 편출(청산) 시그널 (Oliver Kell)
+
+    대량 매도 거래(분산)와 함께 종가가 10·20 EMA를 강하게 하향 이탈 → 상승 추세 종료.
+    """
+    if len(df) < 25:
+        return False
+    closes = df["close"]
+    vols = df["volume"].values
+    ema10 = _ema_series(closes, 10)
+    ema20 = _ema_series(closes, 20)
+    cur = float(closes.iloc[-1])
+    below_both = cur < float(ema10.iloc[-1]) and cur < float(ema20.iloc[-1])
+    avg_vol = float(np.mean(vols[-25:-1])) if len(vols) >= 26 else float(np.mean(vols[:-1]))
+    heavy_vol = vols[-1] > avg_vol * params.get("wedge_drop_vol_ratio", 1.5)
+    return below_both and heavy_vol
 
 
 def _detect_climax(df: pd.DataFrame, params: dict) -> bool:
@@ -314,6 +438,20 @@ def analyze_stock(
     result.volume_surge_ratio = breakout["volume_surge_ratio"]
     result.gap_up = breakout.get("gap_up", False)
 
+    # ── Stage 1 지표: 웨지 팝 (진입) / 웨지 드롭 (편출) ──
+    result.ema10 = float(_ema_series(closes, 10).iloc[-1])
+    result.ema20 = float(_ema_series(closes, 20).iloc[-1])
+    wedge = _detect_wedge_pop(df, params)
+    result.wedge_pop = wedge["detected"]
+    result.wedge_reclaim = wedge["reclaim"]
+    result.wedge_fresh = wedge["fresh_reclaim"]
+    result.wedge_vol_surge = wedge["vol_surge_ratio"]
+    result.ema_tight = wedge["ema_tight"]
+    result.higher_low = wedge["higher_low"]
+    result.reversal_ext = wedge["reversal_ext"]
+    result.wedge_vol_dryup = wedge["vol_dryup"]
+    result.wedge_drop = _detect_wedge_drop(df, params)
+
     # ── 클라이맥스 경고 ──
     result.climax_warning = _detect_climax(df, params)
 
@@ -321,18 +459,23 @@ def analyze_stock(
     signals = []
     confidence = 0
 
-    if not result.mtt_pass:
-        # MTT 미충족 → 스테이지 판정 불가
+    # 웨지 팝은 하락 반전(장기 이평선 하회) 시점을 노리므로 MTT 정식 통과 전에도
+    # 성립한다. 단, 주도주만 잡도록 RS 조건은 유지한다.
+    rs_min = params.get("rs_min", 70)
+    wedge_eligible = result.wedge_pop and rs_rank >= rs_min
+
+    if not result.mtt_pass and not wedge_eligible:
+        # MTT 미충족 + 웨지 팝도 아님 → 스테이지 판정 불가
         result.stage = None
         result.stage_label = "MTT 미충족"
-        if rs_rank < params.get("rs_min", 70):
-            signals.append(f"RS {rs_rank:.0f} < {params.get('rs_min', 70)} (약세)")
+        if rs_rank < rs_min:
+            signals.append(f"RS {rs_rank:.0f} < {rs_min} (약세)")
         if not result.price_above_ma200:
             signals.append("가격 < MA200 (하락 추세)")
         result.signals = signals
         return result
 
-    signals.append("MTT 통과")
+    signals.append("MTT 통과" if result.mtt_pass else "웨지 팝 반전 (MTT 전 진입)")
 
     # ── 공통 보너스 계산 ──
     # MA200 기울기 강도 (20일 동안 변화율)
@@ -375,8 +518,8 @@ def analyze_stock(
     if result.rs_new_high:
         signals.append("RS 신고점")
 
-    # Stage 3: 돌파 재상승 (최우선)
-    if result.breakout_detected:
+    # Stage 3: 돌파 재상승 (최우선) — 정식 추세(MTT) 통과 종목만
+    if result.mtt_pass and result.breakout_detected:
         result.stage = 3
         result.stage_label = "Stage 3 - 돌파 (매수 타점)"
         confidence = 70
@@ -396,8 +539,8 @@ def analyze_stock(
             signals.append(f"거래량 폭증 {result.volume_surge_ratio}x")
         confidence += rs_bonus + ma200_slope_bonus + rs_mom_bonus
 
-    # Stage 2: 조정 베이스 (VCP)
-    elif result.vcp_detected and result.ma_aligned:
+    # Stage 2: 조정 베이스 (VCP) — 정식 추세(MTT) 통과 종목만
+    elif result.mtt_pass and result.vcp_detected and result.ma_aligned:
         result.stage = 2
         result.stage_label = "Stage 2 - 조정 베이스 (대기)"
         confidence = 50
@@ -416,43 +559,54 @@ def analyze_stock(
             signals.append("변동폭 50%+ 축소 — 타이트 베이스")
         confidence += rs_bonus + ma200_slope_bonus + rs_mom_bonus + ma_quality_bonus
 
-    # Stage 1: 1차 상승
-    elif result.ma_aligned and result.rise_from_low_pct >= params.get("stage1_rise_min_pct", 50):
+    # Stage 1: 웨지 팝 (Wedge Pop) — 반전 후 10·20 EMA 동시 탈환 (신규 진입)
+    elif result.wedge_pop:
         result.stage = 1
-        result.stage_label = "Stage 1 - 1차 상승"
-        confidence = 45
-        signals.append(f"60일 저점 대비 +{result.rise_from_low_pct}% 상승")
-        signals.append("MA 정배열 확인")
-        # 상승률 크기별 보너스
-        rise = result.rise_from_low_pct
-        if rise >= 100:
+        result.stage_label = "Stage 1 - 웨지 팝 (신규 진입)"
+        confidence = 55
+        signals.append(f"웨지 팝: 10·20 EMA 동시 탈환, 거래량 {result.wedge_vol_surge}x")
+        # 진입 거래량 강도
+        if result.wedge_vol_surge >= 3.0:
             confidence += 15
-            signals.append("100%↑ 강한 추세")
-        elif rise >= 80:
+            signals.append(f"불 스노트 — 거래량 폭증 {result.wedge_vol_surge}x")
+        elif result.wedge_vol_surge >= 2.0:
             confidence += 10
-            signals.append("80%↑ 견고한 상승")
-        elif rise >= 60:
+        # 셋업 품질 보너스
+        if result.ema_tight:
+            confidence += 8
+            signals.append("10-20 EMA 압착 (변동성 수축)")
+        if result.wedge_vol_dryup:
             confidence += 5
-        confidence += rs_bonus + ma200_slope_bonus + rs_mom_bonus + ma_quality_bonus
+            signals.append("베이스 거래량 마름 후 폭증")
+        if result.reversal_ext:
+            confidence += 5
+            signals.append("반전 확장 후 저점 상승")
+        if result.wedge_fresh:
+            confidence += 5
+            signals.append("당일 신규 탈환")
+        confidence += rs_bonus + ma200_slope_bonus + rs_mom_bonus
+        # 웨지 팝은 돌파 당일 저가 기준 타이트 스탑
+        result.suggested_stop_pct = wedge["stop_pct"]
 
-    # MA 정배열이지만 아직 50% 미달
-    elif result.ma_aligned:
+    # MTT 통과 + MA 정배열이지만 아직 웨지 팝 트리거 없음 — 관찰 (편입 대상 아님)
+    elif result.mtt_pass and result.ma_aligned:
         result.stage = 1
-        result.stage_label = "Stage 1 - 초기 상승"
+        result.stage_label = "Stage 1 - 추세 유지 (관찰)"
         confidence = 30
         signals.append(f"MA 정배열, 저점 대비 +{result.rise_from_low_pct}%")
-        if result.rise_from_low_pct >= 30:
-            confidence += 10
-            signals.append("30%↑ 초기 모멘텀 확인")
-        elif result.rise_from_low_pct >= 15:
+        if result.higher_low:
             confidence += 5
+            signals.append("저점 상승 유지")
+        if result.wedge_reclaim:
+            confidence += 5
+            signals.append("10·20 EMA 위 유지 — 웨지 팝 임박 가능")
         confidence += rs_bonus + ma200_slope_bonus + rs_mom_bonus
 
     else:
         result.stage = None
         result.stage_label = "MTT 통과, 스테이지 미분류"
         confidence = 15
-        signals.append("MA 정배열 아님")
+        signals.append("웨지 팝·정배열 아님")
 
     # 클라이맥스 경고
     if result.climax_warning:
@@ -462,8 +616,14 @@ def analyze_stock(
     result.confidence = min(confidence, 100)
     result.signals = signals
 
-    # ── 포지션 사이징 (2% 룰) — 초기 손절 = 트레일링 스탑과 동일 (-10%)
-    initial_stop = params.get("trail_stop_pct", params.get("stop_loss_pct", -10))
+    # ── 포지션 사이징 (2% 룰) ──
+    # 웨지 팝(Stage 1)은 돌파 당일 저가 기준 타이트 스탑을 이미 부여받았으므로 유지한다.
+    # 그 외 스테이지는 트레일링 스탑과 동일한 초기 손절(-10%)을 사용한다.
+    if result.stage == 1 and result.wedge_pop:
+        initial_stop = result.suggested_stop_pct
+    else:
+        initial_stop = params.get("trail_stop_pct", params.get("stop_loss_pct", -10))
+        result.suggested_stop_pct = initial_stop
     stop_pct = abs(initial_stop) / 100
     risk_amount = total_capital * 0.02  # 총 자산의 2%
     loss_per_share = cur * stop_pct
@@ -471,6 +631,5 @@ def analyze_stock(
         shares = int(risk_amount / loss_per_share)
         position_value = shares * cur
         result.position_size_pct = round(position_value / total_capital * 100, 1)
-    result.suggested_stop_pct = initial_stop
 
     return result

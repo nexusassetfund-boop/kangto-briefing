@@ -363,14 +363,15 @@
           </ul>
         </div>
         <div class="bg-surface-container-low rounded-xl p-4 border-t-2 border-blue-400">
-          <p class="text-xs font-bold text-blue-600 uppercase mb-2">Stage 1 — 1차 상승</p>
-          <p class="text-[11px] text-on-surface-variant mb-2">MA 정배열 + 저점 대비 상승률</p>
+          <p class="text-xs font-bold text-blue-600 uppercase mb-2">Stage 1 — 웨지 팝 (신규 진입)</p>
+          <p class="text-[11px] text-on-surface-variant mb-2">반전 후 10·20 EMA 동시 탈환 (Oliver Kell)</p>
           <ul class="space-y-1 text-[12px] text-on-surface">
-            <li><strong>MA 정배열</strong>: MA5 &gt; MA20 &gt; MA60 &gt; MA120</li>
-            <li>60일 저점 대비 <strong>+50% 이상</strong> 상승</li>
-            <li>+50% 미달이어도 정배열이면 Stage 1 초기</li>
+            <li><strong>10·20 EMA 동시 탈환</strong> (종가 기준)</li>
+            <li>당일 거래량 <strong>2~3배↑</strong> (불 스노트)</li>
+            <li><strong>저점 상승</strong>(Higher Low) 필수</li>
+            <li>EMA 압착·거래량 마름·반전 확장 시 가점</li>
           </ul>
-          <p class="text-[11px] text-blue-600 mt-2">신뢰도 기본: 45점 (초기: 30점)</p>
+          <p class="text-[11px] text-blue-600 mt-2">신뢰도 기본: 55점 · 스탑: 돌파일 저가</p>
         </div>
         <div class="bg-surface-container-low rounded-xl p-4 border-t-2 border-amber-400">
           <p class="text-xs font-bold text-amber-600 uppercase mb-2">Stage 2 — 조정 베이스</p>
@@ -448,7 +449,7 @@
         </button>
         <button data-filter="1" onclick="filterStage(1,this)"
           class="filter-btn px-4 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent -mb-px hover:text-nexus-ink transition-all flex items-center gap-1.5 whitespace-nowrap">
-          스테이지 1 상승 <span id="cnt1"
+          스테이지 1 웨지팝 <span id="cnt1"
             class="bg-blue-50 text-blue-accent px-1.5 py-0.5 rounded text-[10px] font-bold">0</span>
         </button>
         <button data-filter="none" onclick="filterStage('none',this)"
@@ -516,26 +517,31 @@
           </summary>
           <div class="px-5 pb-5 pt-2 border-t border-[#f0ece0] space-y-4">
             <div>
-              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">공통 전제 · MTT 추세 필터</div>
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">추세 필터 · MTT (Minervini Trend Template)</div>
               <ul class="space-y-1 text-[13px] text-slate-600">
                 <li>· 현재가가 <b class="text-nexus-ink">150일선 · 200일선 위</b></li>
                 <li>· <b class="text-nexus-ink">150일선 &gt; 200일선</b> (장기 정배열)</li>
                 <li>· <b class="text-nexus-ink">200일선 상승 추세</b> (최근 20일 기울기 +)</li>
                 <li>· <b class="text-nexus-ink">RS ≥ 70</b> (상대강도 상위 30%)</li>
               </ul>
+              <div class="text-[12px] text-slate-400 leading-relaxed mt-1.5">
+                <b class="text-nexus-ink">스테이지 3 돌파</b>는 MTT 전체를 전제로 함.
+                <b class="text-nexus-ink">스테이지 1 웨지 팝</b>은 하락 반전 초입을 노리므로 MTT의 <b>RS ≥ 70(주도주)</b> 조건만 공통으로 요구하고, 나머지 추세 조건은 요구하지 않음.
+              </div>
             </div>
             <div>
               <div class="flex items-center gap-2 mb-1.5">
                 <span class="inline-block w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
-                <span class="font-extrabold text-nexus-ink text-[13px]">스테이지 1 — 초기 추세 편입</span>
-                <span class="text-[11px] text-slate-400">모멘텀 Easy식</span>
+                <span class="font-extrabold text-nexus-ink text-[13px]">스테이지 1 — 웨지 팝 편입</span>
+                <span class="text-[11px] text-slate-400">Oliver Kell Wedge Pop</span>
               </div>
               <ul class="space-y-1 text-[13px] text-slate-600 pl-1">
-                <li>· 위 MTT 필터 통과 +</li>
-                <li>· <b class="text-nexus-ink">MA 정배열</b> (5 &gt; 20 &gt; 60 &gt; 120일선)</li>
-                <li>· <b class="text-nexus-ink">60일 저점 대비 +50% 이상</b> 상승</li>
-                <li>· 신뢰도 <b class="text-nexus-ink">75점 이상</b></li>
-                <li class="text-[12px] text-slate-400 pl-2">└ MA 정배열만으론 스테이지1로 잡혀도 신뢰도가 75 컷에 못 미쳐, <b>+50% 이상 상승이 사실상 필수</b></li>
+                <li>· 하락 반전 후 <b class="text-nexus-ink">직전 저점보다 높은 저점</b>(Higher Low)</li>
+                <li>· <b class="text-nexus-ink">10·20 EMA 이격 압착</b> + 베이스 거래량 마름</li>
+                <li>· 종가가 <b class="text-nexus-ink">10·20 EMA 동시 상향 탈환</b></li>
+                <li>· 당일 <b class="text-nexus-ink">거래량 2~3배 폭증</b> (불 스노트)</li>
+                <li>· 신뢰도 <b class="text-nexus-ink">75점 이상</b> · RS ≥ 70</li>
+                <li class="text-[12px] text-slate-400 pl-2">└ 반전 초입을 노리므로 <b>MTT 정식 통과 전에도</b> 편입 가능 (RS 조건은 유지)</li>
               </ul>
             </div>
             <div>
@@ -562,8 +568,9 @@
               </div>
               <ul class="space-y-1 text-[13px] text-slate-600 pl-1">
                 <li>· <b class="text-nexus-ink">고점 대비 −10% 트레일링 스탑</b> (진입 직후엔 −10% 손절 겸용)</li>
+                <li>· <b class="text-nexus-ink">웨지 드롭</b> — 대량 거래 동반 종가가 10·20 EMA 하향 이탈 (Oliver Kell)</li>
                 <li>· 종가 &lt; <b class="text-nexus-ink">60일선(MA60)</b> — 추세 이탈</li>
-                <li>· <b class="text-nexus-ink">익절 없음</b> — 승자는 위 두 조건에 걸릴 때까지 계속 보유</li>
+                <li>· <b class="text-nexus-ink">익절 없음</b> — 승자는 위 조건에 걸릴 때까지 계속 보유</li>
               </ul>
               <div class="text-[12px] text-slate-400 leading-relaxed mt-1.5">
                 KOSPI 청산 신호 시 — 전량 매도가 아니라 <b>신규 편입만 차단</b>
@@ -1583,7 +1590,7 @@
     // 스테이지 트랙 메타 (스탁이지 전략실의 1호/2호 방 구분과 동일한 개념)
     const STAGE_TRACKS = [
       { stage: 3, title: '스테이지 3 — 돌파 편입',    desc: '전고점 돌파 + 거래량 폭증 (피크 Easy식)',   dot: 'bg-nexus' },
-      { stage: 1, title: '스테이지 1 — 초기 추세 편입', desc: 'MA 정배열 + 상승 초입 (모멘텀 Easy식)',    dot: 'bg-blue-500' },
+      { stage: 1, title: '스테이지 1 — 웨지 팝 편입', desc: '반전 후 10·20 EMA 동시 탈환 (Oliver Kell)',    dot: 'bg-blue-500' },
     ];
 
     function _stageGroup(list, stage) {
@@ -1593,7 +1600,7 @@
     function renderHoldings(list) {
       const el = document.getElementById('ledgerHoldings');
       if (!list.length) {
-        el.innerHTML = '<div class="bg-white rounded-2xl border border-[#eae5d8] py-12 text-center text-slate-400 text-sm">현재 보유(편입) 종목이 없습니다 — Stage 3 돌파 / Stage 1 초기 추세 시 자동 편입됩니다</div>';
+        el.innerHTML = '<div class="bg-white rounded-2xl border border-[#eae5d8] py-12 text-center text-slate-400 text-sm">현재 보유(편입) 종목이 없습니다 — Stage 3 돌파 / Stage 1 웨지 팝 시 자동 편입됩니다</div>';
         return;
       }
       el.innerHTML = STAGE_TRACKS.map(t => {
