@@ -259,7 +259,11 @@ def _update_stage_history(stage_history: dict, results: list[dict]):
 #       + RS≥70 + 웨지 신뢰도 stage1_entry_confidence(75)↑
 #     공통: KOSPI 진입 허용 + 클라이맥스 경고 없음. 같은 종목이 두 트랙에 각각 편입 가능.
 #   유지: 편입 후 스테이지가 흔들려도 원장에 유지 — 보유일은 리셋되지 않음
-#   이탈(트랙 공통): ① 고점 대비 trail_stop_pct 하락 (기본 -10%, 진입 직후엔 손절 겸용)
+#   부분 익절(Oliver Kell): 승자는 러너로 보유하되 강세에 일부 실현
+#                    ⓐ 3~5일 내 3R↑ 급등 → 잔여의 절반 익절 (1회)
+#                    ⓑ 소진 확장(종가가 10 EMA +N% 이격) 진입 시 → 잔여의 절반 익절
+#                    → 잔여 비중이 tp_min_frac 밑으로 떨어지면 전량 청산 마무리
+#   전량 이탈(트랙 공통): ① 고점 대비 trail_stop_pct 하락 (기본 -10%, 진입 직후엔 손절 겸용)
 #                    ② 웨지 드롭: 대량 거래 동반 10·20 EMA 종가 하향 이탈 (Oliver Kell)
 #                    ③ 추세 이탈: 종가 < exit_ma_period 이동평균 (기본 60일선)
 def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict) -> dict:
@@ -299,6 +303,12 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
     reentry_cooldown = params.get("reentry_cooldown_days", 5)      # 이탈 후 N일간 같은 트랙 재편입 금지
     max_per_track = params.get("max_holdings_per_track", 10)       # 트랙당 동시 보유 상한
     max_daily = params.get("max_daily_entries_per_track", 3)       # 트랙당 하루 신규 편입 상한 (conf 상위 우선)
+    # 부분 익절 (Oliver Kell) — 승자는 러너로 끌고 가되 강세에 일부 실현
+    tp_r_mult = float(params.get("tp_r_multiple", 3.0))            # 3R 급등 시 부분익절 (리스크 대비 배수)
+    tp_fast_days = int(params.get("tp_fast_days", 5))             # N일 이내 급등에만 3R 부분익절 적용
+    tp_frac = float(params.get("tp_partial_frac", 0.5))           # 부분익절 1회당 잔여 대비 매도 비중
+    tp_ext_pct = float(params.get("exhaustion_ext_pct", 20))     # 소진 확장: 종가가 10 EMA 대비 +N% 이격
+    tp_min_frac = float(params.get("tp_min_frac", 0.1))          # 잔여 비중 하한 → 전량 청산
 
     scan_map = {r["ticker"]: r for r in results if r.get("ticker")}
     holdings = ledger.get("holdings", [])
@@ -310,16 +320,29 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
 
     new_holdings = []
     for h in holdings:
+        # 부분 익절 상태 (기존 원장 호환 — 없으면 전량 보유로 간주)
+        h.setdefault("qty_frac", 1.0)          # 잔여 보유 비중 (1.0 = 전량)
+        h.setdefault("partials", [])           # 부분익절 이력
+        h.setdefault("realized_pct", 0.0)      # 원포지션(=1.0) 기준 실현 수익 기여도(%)
+        h.setdefault("tp_3r_done", False)      # 3R 급등 부분익절 1회 소진 여부
+        h.setdefault("was_extended", False)    # 직전일 소진 확장 상태 (엣지 감지용)
+
         r = scan_map.get(h["ticker"])
         price = float(r["current_price"]) if r and r.get("current_price") else h.get("last_price", h["entry_price"])
         entry_price = h["entry_price"]
-        ret_pct = (price / entry_price - 1) * 100 if entry_price else 0.0
+        ret_pct = (price / entry_price - 1) * 100 if entry_price else 0.0   # 잔여분 미실현 수익률
         peak_price = max(h.get("peak_price", entry_price), price)
         peak_ret = (peak_price / entry_price - 1) * 100 if entry_price else 0.0
         days_held = (today - dt.date.fromisoformat(h["entry_date"])).days
-
         drop_from_peak = (price / peak_price - 1) * 100 if peak_price else 0.0
 
+        qty_frac = float(h["qty_frac"])
+        realized = float(h["realized_pct"])
+        partials = list(h["partials"])
+        tp_3r_done = bool(h["tp_3r_done"])
+        was_extended = bool(h["was_extended"])
+
+        # ── 전량 청산 조건 (트랙 공통): 트레일링 / 웨지 드롭 / MA60 ──
         exit_reason = None
         if drop_from_peak <= trail_stop + 1e-9:
             if peak_ret > abs(trail_stop):
@@ -332,21 +355,57 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
         elif r and r.get(exit_ma_key) and price < float(r[exit_ma_key]):
             exit_reason = f"추세 이탈 ({exit_ma_key.upper()} 하회)"
 
+        # ── 부분 익절 (Oliver Kell) — 전량 청산이 아닐 때만, 강세에 일부 실현 ──
+        tp_note = None
+        if not exit_reason and qty_frac > tp_min_frac:
+            one_r = abs(float(h.get("init_stop_pct", trail_stop))) or abs(trail_stop)  # 1R (%)
+            r_mult = ret_pct / one_r if one_r else 0.0
+            ext_now = bool(r and r.get("ema10") and price >= float(r["ema10"]) * (1 + tp_ext_pct / 100))
+            sell_frac, reason = 0.0, None
+            if not tp_3r_done and days_held <= tp_fast_days and r_mult >= tp_r_mult:
+                # 3~5일 내 3R↑ 급등 → 잔여의 절반 익절 (쿠션 확보), 1회만
+                sell_frac, reason, tp_3r_done = tp_frac, f"{tp_r_mult:.0f}R 급등 부분익절", True
+            elif ext_now and not was_extended:
+                # 소진 확장(과열) 진입 엣지 → 강세에 잔여의 절반 익절
+                sell_frac, reason = tp_frac, f"소진 확장 익절 (10 EMA +{tp_ext_pct:.0f}% 이격)"
+            was_extended = ext_now
+            if sell_frac > 0:
+                sold = qty_frac * sell_frac
+                realized += sold * ret_pct       # 원포지션(=1.0) 기준 실현 기여도
+                qty_frac -= sold
+                partials.append({"date": today_str, "price": round(price, 0),
+                                 "frac": round(sold, 3), "ret_pct": round(ret_pct, 2), "reason": reason})
+                tp_note = reason
+                logger.info("부분익절: %s %s %d%% @ %.0f (%.1f%%) — %s",
+                            h["ticker"], h.get("name"), round(sold * 100), price, ret_pct, reason)
+                if qty_frac <= tp_min_frac:       # 잔여 미미 → 전량 청산 마무리
+                    exit_reason = "익절 완료 (분할 매도 소진)"
+
+        total_return = round(realized + qty_frac * ret_pct, 2)   # 원포지션 기준 총수익률(실현+미실현)
+
         h2 = dict(h)
         h2.update({
             "last_price": round(price, 0),
             "return_pct": round(ret_pct, 2),
+            "total_return_pct": total_return,
+            "qty_frac": round(qty_frac, 3),
+            "realized_pct": round(realized, 2),
+            "partials": partials,
+            "tp_3r_done": tp_3r_done,
+            "was_extended": was_extended,
             "peak_price": round(peak_price, 0),
             "days_held": days_held,
             "stage_now": r.get("stage") if r else None,
             "confidence_now": r.get("confidence", 0) if r else 0,
             "last_updated": today_str,
         })
+        if tp_note and not exit_reason:
+            h2["last_action"] = f"{today_str} · {tp_note} (잔여 {round(qty_frac*100)}%)"
         if exit_reason:
             h2.update({"exit_date": today_str, "exit_price": round(price, 0),
-                       "exit_reason": exit_reason})
+                       "exit_reason": exit_reason, "return_pct": total_return})
             exited.insert(0, h2)
-            logger.info("이탈: %s %s (%.1f%%) — %s", h["ticker"], h.get("name"), ret_pct, exit_reason)
+            logger.info("이탈: %s %s (총 %.1f%%) — %s", h["ticker"], h.get("name"), total_return, exit_reason)
         else:
             new_holdings.append(h2)
 
@@ -380,6 +439,8 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
                 ticker = r["ticker"]
                 price = float(r["current_price"])
                 conf_v = track["conf"](r)
+                # 초기 손절(1R) — 모멘텀(웨지)은 돌파 당일 저가 기준, 돌파는 트레일링과 동일
+                init_stop = r.get("wedge_stop_pct") if (tid == 1 and r.get("wedge_stop_pct")) else trail_stop
                 new_holdings.append({
                     "ticker": ticker,
                     "name": r.get("name", ticker),
@@ -388,9 +449,16 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
                     "entry_date": today_str,
                     "entry_price": round(price, 0),
                     "entry_confidence": conf_v,
+                    "init_stop_pct": init_stop,
                     "last_price": round(price, 0),
                     "peak_price": round(price, 0),
                     "return_pct": 0.0,
+                    "total_return_pct": 0.0,
+                    "qty_frac": 1.0,
+                    "realized_pct": 0.0,
+                    "partials": [],
+                    "tp_3r_done": False,
+                    "was_extended": False,
                     "days_held": 0,
                     "stage_now": r.get("stage"),
                     "confidence_now": conf_v,
@@ -623,7 +691,7 @@ async def main():
             "stats": {
                 "holding_count": len(ledger["holdings"]),
                 "exited_count": len(ledger["exited"]),
-                "avg_return": round(sum(h["return_pct"] for h in ledger["holdings"]) / len(ledger["holdings"]), 2) if ledger["holdings"] else 0,
+                "avg_return": round(sum(h.get("total_return_pct", h["return_pct"]) for h in ledger["holdings"]) / len(ledger["holdings"]), 2) if ledger["holdings"] else 0,
                 "win_rate": round(sum(1 for e in ledger["exited"] if e.get("return_pct", 0) > 0) / len(ledger["exited"]) * 100, 1) if ledger["exited"] else 0,
             },
         })

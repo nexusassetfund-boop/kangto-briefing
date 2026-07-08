@@ -561,15 +561,25 @@
             </div>
             <div class="pt-3 border-t border-[#f0ece0]">
               <div class="flex items-center gap-2 mb-1.5">
+                <span class="inline-block w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                <span class="font-extrabold text-nexus-ink text-[13px]">부분 익절 (Oliver Kell)</span>
+                <span class="text-[11px] text-slate-400">일부 실현 + 러너 보유</span>
+              </div>
+              <ul class="space-y-1 text-[13px] text-slate-600 pl-1">
+                <li>· <b class="text-nexus-ink">3~5일 내 3R↑ 급등</b> → 잔여의 <b class="text-nexus-ink">절반 익절</b> (쿠션 확보, 1회)</li>
+                <li>· <b class="text-nexus-ink">소진 확장</b>(종가가 10 EMA 대비 +20% 이격) 진입 시 → 잔여의 <b class="text-nexus-ink">절반 익절</b></li>
+                <li class="text-[12px] text-slate-400 pl-2">└ 나머지(러너)는 아래 전량 이탈 조건에 걸릴 때까지 계속 보유. 잔여 10% 밑이면 전량 청산.</li>
+              </ul>
+            </div>
+            <div class="pt-3 border-t border-[#f0ece0]">
+              <div class="flex items-center gap-2 mb-1.5">
                 <span class="inline-block w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
-                <span class="font-extrabold text-nexus-ink text-[13px]">편출(이탈) 조건 — 트랙 공통</span>
-                <span class="text-[11px] text-slate-400">익절 규칙 없음</span>
+                <span class="font-extrabold text-nexus-ink text-[13px]">전량 이탈 조건 — 트랙 공통</span>
               </div>
               <ul class="space-y-1 text-[13px] text-slate-600 pl-1">
                 <li>· <b class="text-nexus-ink">고점 대비 −10% 트레일링 스탑</b> (진입 직후엔 −10% 손절 겸용)</li>
                 <li>· <b class="text-nexus-ink">웨지 드롭</b> — 대량 거래 동반 종가가 10·20 EMA 하향 이탈 (Oliver Kell)</li>
                 <li>· 종가 &lt; <b class="text-nexus-ink">60일선(MA60)</b> — 추세 이탈</li>
-                <li>· <b class="text-nexus-ink">익절 없음</b> — 승자는 위 조건에 걸릴 때까지 계속 보유</li>
               </ul>
               <div class="text-[12px] text-slate-400 leading-relaxed mt-1.5">
                 KOSPI 청산 신호 시 — 전량 매도가 아니라 <b>신규 편입만 차단</b>
@@ -1534,6 +1544,11 @@
       ? `<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold ${exited ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-green-50 text-green-700 border border-green-200'}">${d}일</span>`
       : `<span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-500 border border-indigo-200">진입</span>`;
 
+    // 부분 익절 후 잔여 보유비중 배지 (100% 미만일 때만)
+    const _qtyBadge = f => (f != null && f < 0.999)
+      ? `<span class="inline-block ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">잔여 ${Math.round(f * 100)}%</span>`
+      : '';
+
     // 섹터 셀 (트랙 색 점 + 섹터명)
     const _sectorCell = (sector, dot) => sector
       ? `<span class="inline-flex items-center gap-1.5 text-[11px] text-slate-500"><span class="inline-block w-1.5 h-1.5 rounded-full ${dot} shrink-0"></span>${sector}</span>`
@@ -1561,15 +1576,17 @@
       </div>`;
 
     function _holdingRow(h, dot) {
+      const tr = (h.total_return_pct != null ? h.total_return_pct : h.return_pct);
+      const realized = h.realized_pct || 0;
       return `
       <tr class="border-b border-[#f0ece0] last:border-0 hover:bg-[#f6f3ea] transition-colors cursor-pointer" onclick="openDetail('${h.ticker}')">
         <td class="px-5 py-3.5">${_sectorCell(h.sector, dot)}</td>
-        <td class="px-3 py-3.5"><span class="font-bold text-nexus-ink">${h.name}</span><span class="text-[10px] text-slate-400 ml-1.5">${h.ticker}</span></td>
+        <td class="px-3 py-3.5"><span class="font-bold text-nexus-ink">${h.name}</span><span class="text-[10px] text-slate-400 ml-1.5">${h.ticker}</span>${_qtyBadge(h.qty_frac)}</td>
         <td class="px-3 py-3.5 text-right text-slate-500">${_num(h.entry_price)}</td>
         <td class="px-3 py-3.5 text-right font-semibold text-slate-800">${_num(h.last_price)}</td>
         <td class="px-3 py-3.5 text-center text-slate-500 text-xs">${_dstr(h.entry_date)}</td>
         <td class="px-3 py-3.5 text-center">${_daysBadge(h.days_held, false)}</td>
-        <td class="px-5 py-3.5 text-right font-extrabold ${_retCls(h.return_pct)}">${_retTxt(h.return_pct)}</td>
+        <td class="px-5 py-3.5 text-right font-extrabold ${_retCls(tr)}">${_retTxt(tr)}${realized > 0.005 ? `<span class="block text-[10px] font-medium text-slate-400">실현 ${_retTxt(realized)}</span>` : ''}</td>
       </tr>`;
     }
 
