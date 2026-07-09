@@ -1636,19 +1636,19 @@
       requestAnimationFrame(() => STAGE_TRACKS.forEach(t => _drawTrackChart(t.stage)));
     }
 
-    // ── 트랙별 누적 수익률 차트 (실현 + 보유 평가, 트레이드당 동일 비중 %p 합산) ──
+    // ── 트랙별 성과 차트 (트레이드당 평균 수익률 — 실현 + 보유 평가) ──
     const TRACK_LINE = { 3: '#96731a', 1: '#3b82f6' };  // 돌파=골드, 모멘텀=블루 (팔레트 검증 통과)
 
     function _trackChartCard(stage) {
       const series = _trackHistory[String(stage)] || [];
       if (series.length < 2) {
         return `<div class="bg-white rounded-2xl border border-[#eae5d8] shadow-sm mt-3 px-4 py-3 text-[12px] text-slate-400">
-          누적 수익률 차트 — 데이터 수집 중 (장마감마다 1점씩 쌓입니다${series.length ? ` · 현재 ${_retTxt(series[series.length-1].cum)}` : ''})</div>`;
+          평균 수익률 차트 — 데이터 수집 중 (장마감마다 1점씩 쌓입니다${series.length ? ` · 현재 ${_retTxt(series[series.length-1].cum)}` : ''})</div>`;
       }
       return `
       <div class="bg-white rounded-2xl border border-[#eae5d8] shadow-sm mt-3 px-4 pt-3 pb-2 relative">
         <div class="flex items-center justify-between gap-2 mb-1 flex-wrap">
-          <span class="text-[11px] font-bold text-slate-400">누적 수익률 — 실현 + 보유 평가 <span class="font-medium">(트레이드당 동일 비중 · %p 합산 · 장마감 기준)</span></span>
+          <span class="text-[11px] font-bold text-slate-400">트레이드당 평균 수익률 — 실현 + 보유 평가 <span class="font-medium">(장마감 기준)</span></span>
           <span class="text-[13px] font-extrabold ${_retCls(series[series.length-1].cum)}" style="font-variant-numeric:tabular-nums">${_retTxt(series[series.length-1].cum)}</span>
         </div>
         <canvas id="trackChart${stage}" class="w-full block cursor-crosshair"></canvas>

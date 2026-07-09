@@ -484,6 +484,12 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
 #   실현 누적 베이스(cum_base)는 메타에 확정 저장 — 이탈 기록이 180일 보존정책으로
 #   잘려나가도 과거 누적치가 함께 꺼지지 않는다. 같은 날 재실행은 오늘 점만 갱신(멱등).
 def _update_track_history(state: dict, ledger: dict):
+    """트랙별 성과 곡선 — 트레이드당 평균 수익률 (실현 + 보유 평가) ÷ 트레이드 수.
+
+    이전의 %p 단순 합산 방식은 동시 보유 종목 수에 비례해 과장돼(-94%p 같은 값)
+    포트폴리오 수익률로 읽을 수 없었다. 평균 방식은 '이 전략의 트레이드는
+    평균 몇 %를 벌고 있나'로 읽히고 트랙 간 비교도 공정하다.
+    """
     today_str = dt.date.today().isoformat()
     hist = state.setdefault("track_history", {})
     meta = state.setdefault("track_history_meta", {})
@@ -491,36 +497,35 @@ def _update_track_history(state: dict, ledger: dict):
         key = str(tid)
         ex = [e for e in ledger.get("exited", [])
               if e.get("entry_stage", 3) == tid and e.get("exit_date")]
-        series = hist.get(key) or []
-        m = meta.get(key)
-        if m is None:
-            # 백필: 이탈 기록을 날짜순 누적 → 과거 곡선 생성, 오늘 이전까지를 베이스로 확정
-            cum, by_date = 0.0, {}
+        holds = [h for h in ledger.get("holdings", [])
+                 if h.get("entry_stage", 3) == tid]
+        m = meta.get(key) or {}
+        if m.get("mode") != "avg":
+            # 구(%p 합산) 시리즈 폐기 → 이탈 기록으로 평균 곡선 백필
+            series, cum_sum, n = [], 0.0, 0
             for e in sorted(ex, key=lambda e: e["exit_date"]):
-                cum += float(e.get("return_pct") or 0)
-                by_date[e["exit_date"]] = cum
-            series = [{"date": d, "cum": round(c, 2)} for d, c in sorted(by_date.items())
-                      if d < today_str]
-            cum_base = series[-1]["cum"] if series else 0.0
+                cum_sum += float(e.get("return_pct") or 0)
+                n += 1
+                point = {"date": e["exit_date"], "cum": round(cum_sum / n, 2)}
+                if series and series[-1]["date"] == point["date"]:
+                    series[-1] = point
+                else:
+                    series.append(point)
+            series = [p for p in series if p["date"] < today_str]
         else:
-            cum_base = float(m.get("cum_base", 0.0))
-            last_date = m.get("last_date", "")
-            if last_date < today_str:
-                # 지난 실행일 이후~어제 사이 이탈분을 베이스에 확정 반영
-                cum_base += sum(float(e.get("return_pct") or 0) for e in ex
-                                if last_date <= e["exit_date"] < today_str)
-        today_realized = sum(float(e.get("return_pct") or 0) for e in ex
-                             if e["exit_date"] == today_str)
-        open_pnl = sum(float(h.get("total_return_pct", h.get("return_pct", 0)) or 0)
-                       for h in ledger.get("holdings", [])
-                       if h.get("entry_stage", 3) == tid)
-        point = {"date": today_str, "cum": round(cum_base + today_realized + open_pnl, 2)}
+            series = hist.get(key) or []
+        realized_sum = sum(float(e.get("return_pct") or 0) for e in ex)
+        open_sum = sum(float(h.get("total_return_pct", h.get("return_pct", 0)) or 0)
+                       for h in holds)
+        n_total = len(ex) + len(holds)
+        avg = (realized_sum + open_sum) / n_total if n_total else 0.0
+        point = {"date": today_str, "cum": round(avg, 2)}
         if series and series[-1]["date"] == today_str:
             series[-1] = point
         else:
             series.append(point)
         hist[key] = series[-250:]
-        meta[key] = {"cum_base": round(cum_base, 2), "last_date": today_str}
+        meta[key] = {"mode": "avg", "last_date": today_str}
 
 
 # ── 가치투자 시세/저평가 워치 (장마감 스냅샷) ──────────────────
