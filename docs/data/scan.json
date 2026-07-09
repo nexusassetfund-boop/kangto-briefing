@@ -1,5 +1,5 @@
 {
- "scan_time": "2026-07-09T21:23:37+09:00",
+ "scan_time": "2026-07-10T01:17:48+09:00",
  "universe_size": 350,
  "scanned": 350,
  "kospi": {
@@ -11,7 +11,7 @@
   "ma50_declining": false,
   "exit_signal": false,
   "entry_allowed": true,
-  "updated": "2026-07-09T21:23:37+09:00"
+  "updated": "2026-07-10T01:17:48+09:00"
  },
  "results": [
   {
@@ -6531,7 +6531,7 @@
    "ma200_rising": true,
    "rs_rank": 60.9,
    "rs_momentum": 9.9,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "전기 통신업",
    "sector_rs": 0.0,
    "ma_aligned": false,
