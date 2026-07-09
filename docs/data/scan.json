@@ -1,5 +1,5 @@
 {
- "scan_time": "2026-07-09T21:19:47+09:00",
+ "scan_time": "2026-07-09T21:23:37+09:00",
  "universe_size": 350,
  "scanned": 350,
  "kospi": {
@@ -11,7 +11,7 @@
   "ma50_declining": false,
   "exit_signal": false,
   "entry_allowed": true,
-  "updated": "2026-07-09T21:19:47+09:00"
+  "updated": "2026-07-09T21:23:37+09:00"
  },
  "results": [
   {
@@ -5666,8 +5666,8 @@
    "price_above_ma200": true,
    "ma150_above_ma200": true,
    "ma200_rising": true,
-   "rs_rank": 60.9,
-   "rs_momentum": -0.1,
+   "rs_rank": 60.6,
+   "rs_momentum": -0.4,
    "rs_new_high": false,
    "sector": "기타 금융업",
    "sector_rs": 0.0,
@@ -6529,8 +6529,8 @@
    "price_above_ma200": true,
    "ma150_above_ma200": true,
    "ma200_rising": true,
-   "rs_rank": 60.3,
-   "rs_momentum": 9.3,
+   "rs_rank": 60.9,
+   "rs_momentum": 9.9,
    "rs_new_high": true,
    "sector": "전기 통신업",
    "sector_rs": 0.0,
@@ -6570,7 +6570,7 @@
    "position_size_pct": 0.0,
    "scan_date": "2026-07-09",
    "signals": [
-    "RS 60 < 70 (약세)"
+    "RS 61 < 70 (약세)"
    ],
    "change_pct": 4.69,
    "days_in_stage": 7
@@ -7278,7 +7278,7 @@
    "ma200_rising": true,
    "rs_rank": 24.8,
    "rs_momentum": 4.8,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "상품 중개업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -7857,7 +7857,7 @@
    "ma200_rising": false,
    "rs_rank": 54.6,
    "rs_momentum": 6.6,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "전기 통신업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -8031,7 +8031,7 @@
    "ma200_rising": false,
    "rs_rank": 52.6,
    "rs_momentum": 12.6,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기타 금융업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -9704,7 +9704,7 @@
    "ma200_rising": false,
    "rs_rank": 56.6,
    "rs_momentum": 27.6,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "경비, 경호 및 탐정업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -10453,7 +10453,7 @@
    "ma200_rising": false,
    "rs_rank": 49.5,
    "rs_momentum": 6.5,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "음·식료품 및 담배 도매업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -11030,7 +11030,7 @@
    "ma200_rising": true,
    "rs_rank": 62.6,
    "rs_momentum": 1.6,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "자동차 신품 부품 제조업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -13049,7 +13049,7 @@
    "ma200_rising": false,
    "rs_rank": 35.6,
    "rs_momentum": 0.0,
-   "rs_new_high": true,
+   "rs_new_high": false,
    "sector": "기타 식품 제조업",
    "sector_rs": 0.0,
    "ma_aligned": false,
@@ -19678,8 +19678,8 @@
    "price_above_ma200": false,
    "ma150_above_ma200": true,
    "ma200_rising": true,
-   "rs_rank": 60.6,
-   "rs_momentum": 3.6,
+   "rs_rank": 60.3,
+   "rs_momentum": 3.3,
    "rs_new_high": false,
    "sector": "의약품 제조업",
    "sector_rs": 0.0,
@@ -19719,7 +19719,7 @@
    "position_size_pct": 0.0,
    "scan_date": "2026-07-09",
    "signals": [
-    "RS 61 < 70 (약세)",
+    "RS 60 < 70 (약세)",
     "가격 < MA200 (하락 추세)"
    ],
    "change_pct": 0.68,
