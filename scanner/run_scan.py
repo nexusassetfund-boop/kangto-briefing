@@ -718,8 +718,10 @@ async def main():
     # 장중 스캔은 감지기(scan.json)만 새로고침하고 원장은 직전 마감 상태를 그대로 유지.
     # 공휴일 가드: 오늘이 거래일이 아니면(휴장) 원장을 건드리지 않는다 —
     # 휴장일 크론 실행 시 전일 종가로 편입/이탈이 잘못 기록되는 것 방지.
+    # 스트래들 가드: 장중에 시작해 가상 캔들(실시간 중간가)을 붙인 실행이
+    # 지연되어 15:30을 넘겨 끝나면, 비종가 데이터로 이탈·부분익절이 확정되는 것을 막는다.
     now = dt.datetime.now(tz=KST)
-    is_close_run = (now.hour, now.minute) >= (15, 30) and _is_trading_day_today()
+    is_close_run = (now.hour, now.minute) >= (15, 30) and _is_trading_day_today() and not realtime
     ledger = state.get("ledger", {"holdings": [], "exited": []})
     if is_close_run:
         ledger = _update_ledger(ledger, results, kospi, params)
