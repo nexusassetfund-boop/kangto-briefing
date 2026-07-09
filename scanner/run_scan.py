@@ -483,6 +483,18 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
 #   - 이후 매 장마감: (전일까지 실현 누적 + 오늘 실현 + 보유 평가손익) 스냅샷을 1점 추가
 #   실현 누적 베이스(cum_base)는 메타에 확정 저장 — 이탈 기록이 180일 보존정책으로
 #   잘려나가도 과거 누적치가 함께 꺼지지 않는다. 같은 날 재실행은 오늘 점만 갱신(멱등).
+def _is_trading_day_today() -> bool:
+    """오늘이 한국 증시 거래일인지 — KOSPI 최신 캔들 날짜로 판별 (공휴일 캘린더 불필요)"""
+    try:
+        import FinanceDataReader as fdr
+        df = fdr.DataReader("KS11", dt.date.today() - dt.timedelta(days=10))
+        if df is None or df.empty:
+            return True  # 판별 실패 시 기존 동작 유지
+        return df.index[-1].date() == dt.date.today()
+    except Exception:
+        return True
+
+
 def _update_track_history(state: dict, ledger: dict):
     """트랙별 성과 곡선 — 트레이드당 평균 수익률 (실현 + 보유 평가) ÷ 트레이드 수.
 
@@ -704,8 +716,10 @@ async def main():
 
     # 전략 포트폴리오(원장)는 장마감(15:30 KST) 이후 실행에서만 하루 1회 갱신한다.
     # 장중 스캔은 감지기(scan.json)만 새로고침하고 원장은 직전 마감 상태를 그대로 유지.
+    # 공휴일 가드: 오늘이 거래일이 아니면(휴장) 원장을 건드리지 않는다 —
+    # 휴장일 크론 실행 시 전일 종가로 편입/이탈이 잘못 기록되는 것 방지.
     now = dt.datetime.now(tz=KST)
-    is_close_run = (now.hour, now.minute) >= (15, 30)
+    is_close_run = (now.hour, now.minute) >= (15, 30) and _is_trading_day_today()
     ledger = state.get("ledger", {"holdings": [], "exited": []})
     if is_close_run:
         ledger = _update_ledger(ledger, results, kospi, params)
