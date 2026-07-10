@@ -1,5 +1,5 @@
 {
- "updated": "2026-07-10T22:47:43+09:00",
+ "updated": "2026-07-11T01:10:06+09:00",
  "source": "https://docs.google.com/spreadsheets/d/1dpKl_YP9eAquU-G0Et9tcpyzw1YlziKvwoJzH4OsHfw",
  "kpi": {
   "portfolio_value": 143801068.0,
@@ -8,8 +8,8 @@
   "eval_pnl_pct": 2.3,
   "cum_pnl": -6198932.0,
   "cum_pnl_pct": -4.13,
-  "day_change": 1476963.0,
-  "day_change_pct": 1.04,
+  "day_change": 0.0,
+  "day_change_pct": 0.0,
   "realized_pnl": 6717404.0,
   "nav_index": 958.67,
   "n_stocks": 2.0,
@@ -25,20 +25,20 @@
     "change": 43.4
    },
    "dow": {
-    "value": 52544.4,
-    "change": 57.0
+    "value": 52577.3,
+    "change": 89.9
    },
    "nasdaq": {
-    "value": 26174.2,
-    "change": -32.7
+    "value": 26219.7,
+    "change": 12.8
    },
    "sp500": {
-    "value": 7545.6,
-    "change": 9.6
+    "value": 7555.6,
+    "change": 12.0
    },
    "usdkrw": {
-    "value": 1504.4,
-    "change": -0.7
+    "value": 1500.5,
+    "change": -4.6
    }
   }
  },
@@ -58,7 +58,7 @@
    "buy_amount": 7829500.0,
    "target_price": null,
    "buy_date": "2026-07-01",
-   "hold_days": 9.0,
+   "hold_days": 10.0,
    "weight": "27.9%",
    "memo": ""
   },
@@ -77,7 +77,7 @@
    "buy_amount": 20250000.0,
    "target_price": null,
    "buy_date": "2026-07-08",
-   "hold_days": 2.0,
+   "hold_days": 3.0,
    "weight": "72.1%",
    "memo": ""
   }
@@ -111,7 +111,7 @@
    "change_pct": -0.27,
    "target_price": null,
    "upside_pct": -100.0,
-   "mktcap": "15,536,910억",
+   "mktcap": "15,536,906억",
    "per": "20.6x",
    "eps": "105,627원",
    "high52": 2987000.0,
@@ -490,6 +490,12 @@
    }
   ],
   "value": [
+   {
+    "date": "2026-7-11",
+    "portfolio_value": 143801068.0,
+    "total_value": 28726500.0,
+    "eval_pnl": 647000.0
+   },
    {
     "date": "2026-7-10",
     "portfolio_value": 143801068.41,
