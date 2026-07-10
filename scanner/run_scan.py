@@ -28,6 +28,7 @@ from data_provider import (
     KST,
     fetch_index_constituents,
     fetch_kospi_status,
+    fetch_market_cap,
     fetch_ohlcv,
     fetch_realtime_prices_batch,
     is_market_hours,
@@ -701,6 +702,21 @@ async def main():
         logger.error("열화 스캔(유니버스 %d≈관심 %d, 종목명해결 %d/%d) — scan.json 미갱신, 기존 데이터 보존",
                      len(scan_targets), watch_n, names_ok, len(results))
         sys.exit(1)
+
+    # 시가총액 (섹터 맵 트리맵용) — KRX 일괄 1회, 실패해도 스캔은 계속
+    try:
+        mc_df = await fetch_market_cap()
+        if mc_df is not None and not mc_df.empty and "시가총액" in mc_df.columns:
+            mc = mc_df["시가총액"].to_dict()
+            attached = 0
+            for r in results:
+                v = mc.get(r["ticker"])
+                if v:
+                    r["mktcap_100m"] = round(float(v) / 1e8)  # 억원 단위
+                    attached += 1
+            logger.info("시가총액 부착: %d/%d 종목", attached, len(results))
+    except Exception as e:
+        logger.warning("시가총액 조회 실패 (섹터 맵은 표시 생략): %s", e)
 
     # 5) KOSPI 상태 + 히스토리 + 원장
     kospi = await fetch_kospi_status()
