@@ -466,6 +466,28 @@ def _find_recent_trading_date() -> Optional[str]:
     return None
 
 
+# 구성종목 캐시 — KRX/FDR이 러너 IP를 차단하는 시간대에도 스캔이 완주하도록.
+# 지수 구성은 반기 리밸런싱이라 하루 이틀 묵은 캐시로 충분하다.
+_UNIVERSE_CACHE = Path(__file__).resolve().parents[1] / "docs" / "data" / "universe_cache.json"
+
+
+def _load_universe_cache() -> list[tuple[str, str]]:
+    try:
+        d = json.loads(_UNIVERSE_CACHE.read_text("utf-8"))
+        return [(str(x[0]), str(x[1])) for x in d.get("tickers", [])]
+    except Exception:
+        return []
+
+
+def _save_universe_cache(tickers: list[tuple[str, str]]) -> None:
+    try:
+        _UNIVERSE_CACHE.write_text(json.dumps(
+            {"updated": dt.datetime.now().isoformat(timespec="seconds"), "tickers": tickers},
+            ensure_ascii=False), "utf-8")
+    except Exception as e:
+        logger.warning("유니버스 캐시 저장 실패: %s", e)
+
+
 def _fetch_index_constituents_sync() -> list[tuple[str, str]]:
     """코스피200 + 코스닥150 지수 구성종목 (ticker, name) 리스트"""
     tickers = []
@@ -498,6 +520,15 @@ def _fetch_index_constituents_sync() -> list[tuple[str, str]]:
     if len(tickers) < 100:
         logger.info("pykrx 지수 조회 부족 (%d개) — FDR fallback 시도", len(tickers))
         tickers, seen = _fetch_constituents_fdr_fallback()
+
+    # KRX·FDR 모두 차단된 시간대 → 마지막 성공 캐시로 완주 (구성은 반기 단위라 안전)
+    if len(tickers) < 100:
+        cached = _load_universe_cache()
+        if len(cached) >= 100:
+            logger.warning("KRX/FDR 모두 실패 — 유니버스 캐시 %d종목으로 대체", len(cached))
+            return cached
+    else:
+        _save_universe_cache(tickers)
 
     logger.info("지수 구성종목 총 %d개 (중복 제거)", len(tickers))
     return tickers
