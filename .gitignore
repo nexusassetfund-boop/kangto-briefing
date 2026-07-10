@@ -14,3 +14,5 @@ __pycache__/
 holdings-sweep.json
 analysis.txt
 transactions-all.json
+briefing_input.json
+briefing_output.json
