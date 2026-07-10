@@ -451,19 +451,20 @@ async def fetch_all_tickers() -> list[tuple[str, str]]:
     return await loop.run_in_executor(None, _fetch_all_tickers_sync)
 
 
+_recent_trading_date_cache: Optional[str] = None
+
+
 def _find_recent_trading_date() -> Optional[str]:
-    """pykrx로 최근 거래일 찾기 — 최대 7일 시도 (주말+연휴 대비)"""
-    today = dt.date.today()
-    for delta in range(0, 7):
-        check = today - dt.timedelta(days=delta)
-        check_str = check.strftime("%Y%m%d")
-        try:
-            test = krx.get_market_ticker_list(check_str, market="KOSPI")
-            if test and len(test) > 100:
-                return check_str
-        except Exception:
-            continue
-    return None
+    """pykrx 최근 거래일 — 전용 함수 1회 호출 + 프로세스 캐시
+    (기존: 전종목 스냅샷을 최대 7회 조회 — KRX 차단 유발 요인)"""
+    global _recent_trading_date_cache
+    if _recent_trading_date_cache:
+        return _recent_trading_date_cache
+    try:
+        _recent_trading_date_cache = krx.get_nearest_business_day_in_a_week()
+    except Exception:
+        _recent_trading_date_cache = None
+    return _recent_trading_date_cache
 
 
 # 구성종목 캐시 — KRX/FDR이 러너 IP를 차단하는 시간대에도 스캔이 완주하도록.
@@ -496,6 +497,14 @@ def _fetch_index_constituents_sync() -> list[tuple[str, str]]:
     date_str = _find_recent_trading_date()
 
     if date_str:
+        # 종목명 일괄 맵 — 시장당 1회 조회 (기존: 구성종목당 개별 KRX 호출 ~350회 → 차단 유발)
+        name_map = {}
+        for market in ["KOSPI", "KOSDAQ"]:
+            try:
+                s = krx.get_market_ticker_and_name(date_str, market=market)
+                name_map.update({str(c): str(n) for c, n in s.items()})
+            except Exception:
+                pass
         # 코스피200: 지수 코드 "1028", 코스닥150: 지수 코드 "2203"
         index_map = {"1028": "코스피200", "2203": "코스닥150"}
         for idx_code, idx_name in index_map.items():
@@ -505,11 +514,7 @@ def _fetch_index_constituents_sync() -> list[tuple[str, str]]:
                     for ticker in df:
                         if ticker not in seen:
                             seen.add(ticker)
-                            try:
-                                name = krx.get_market_ticker_name(ticker)
-                            except Exception:
-                                name = ticker
-                            tickers.append((ticker, name))
+                            tickers.append((ticker, name_map.get(ticker, ticker)))
                     logger.info("%s 구성종목 %d개 로드", idx_name, len(df))
             except Exception as e:
                 logger.warning("%s 구성종목 조회 실패: %s", idx_name, e)

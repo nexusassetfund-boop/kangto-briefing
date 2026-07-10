@@ -89,20 +89,14 @@ def _compute_rs_sync() -> tuple[dict, dict, dict]:
     ticker_map: dict = {}
     sector_map: dict = {}
 
-    today = dt.date.today()
+    # 거래일 탐색 — 전용 함수 1회 호출 (기존: 전종목 스냅샷 최대 7회, KRX 차단 유발 요인)
     end_str = None
     end_date = None
-    for delta in range(0, 7):
-        check = today - dt.timedelta(days=delta)
-        check_str = check.strftime("%Y%m%d")
-        try:
-            tlist = krx.get_market_ticker_list(check_str, market="KOSPI")
-            if tlist and len(tlist) > 100:
-                end_str = check_str
-                end_date = check
-                break
-        except Exception:
-            continue
+    try:
+        end_str = krx.get_nearest_business_day_in_a_week()
+        end_date = dt.datetime.strptime(end_str, "%Y%m%d").date()
+    except Exception:
+        pass
 
     # 종목명 + 섹터 (FDR KRX-DESC)
     try:
@@ -125,14 +119,12 @@ def _compute_rs_sync() -> tuple[dict, dict, dict]:
         logger.warning("pykrx 거래일 감지 실패 — RS는 fallback 경로 사용")
         return ticker_map, sector_map, {}
 
+    # 종목명 보충 — 시장당 일괄 1회 조회 (기존: 미해결 종목당 개별 KRX 호출 수백 회 → 차단 유발)
     for market in ["KOSPI", "KOSDAQ"]:
         try:
-            for code in krx.get_market_ticker_list(end_str, market=market):
-                if code not in ticker_map:
-                    try:
-                        ticker_map[code] = krx.get_market_ticker_name(code)
-                    except Exception:
-                        ticker_map[code] = code
+            names = krx.get_market_ticker_and_name(end_str, market=market)
+            for code, name in names.items():
+                ticker_map.setdefault(str(code), str(name))
         except Exception:
             pass
 
