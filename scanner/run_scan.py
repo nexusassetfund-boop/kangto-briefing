@@ -47,6 +47,68 @@ TRACKING_PATH = DATA_DIR / "tracking.json"  # 보유/이탈 원장 (프론트가
 
 RS_PERIODS = [("q1", 63, 0.4), ("q2", 126, 0.2), ("q3", 189, 0.2), ("q4", 252, 0.2)]
 
+# ── 섹터 대표 ETF (섹터 맵 사분면용 — 시장 전체를 대표하면서 조회는 섹터당 1종목) ──
+# 키는 sector_map.json의 섹터 슬러그와 일치해야 한다. 대표 ETF가 없거나 조회 실패한
+# 섹터는 사분면에서 제외된다(프론트가 있는 것만 그림).
+SECTOR_ETFS = {
+    "semiconductor": ("091160", "KODEX 반도체"),
+    "robotics": ("445290", "KODEX K-로봇액티브"),
+    "it-service-sw": ("157490", "TIGER 소프트웨어"),
+    "auto-mobility": ("091180", "KODEX 자동차"),
+    "energy": ("377990", "TIGER Fn신재생에너지"),
+    "finance": ("139270", "TIGER 200 금융"),
+    "aero-defense-space": ("449450", "PLUS K방산"),
+    "resource-materials": ("139240", "TIGER 200 철강소재"),
+    "battery-renewable": ("305720", "KODEX 2차전지산업"),
+    "bio-healthcare": ("143860", "TIGER 헬스케어"),
+    "shipbuilding-shipping": ("466920", "SOL 조선TOP3플러스"),
+    "telecom": ("098560", "TIGER 방송통신"),
+    "construction-realestate": ("117700", "KODEX 건설"),
+    "media-ent-game": ("364990", "TIGER 미디어컨텐츠"),
+    "retail-fashion-beauty": ("228790", "TIGER 화장품"),
+    "chem-materials": ("117460", "KODEX 에너지화학"),
+    "food-agri-fishery": ("266410", "KODEX 필수소비재"),
+}
+
+
+async def _compute_sector_etf_rs() -> dict:
+    """섹터 대표 ETF의 장기 RS(1/3/6개월 가중 수익률 백분위)와 단기 모멘텀(5일 수익률 백분위).
+    사분면(부상/주도/과열/소외)용 — 유니버스 편향 없이 시장 전체 섹터 흐름을 반영한다."""
+    rows = {}
+    for slug, (code, name) in SECTOR_ETFS.items():
+        try:
+            df = await fetch_ohlcv(code, days=280)
+            if df is None or len(df) < 130:
+                continue
+            closes = df["close"]
+            cur = float(closes.iloc[-1])
+            rets = {}
+            for label, days in (("m1", 21), ("m3", 63), ("m6", 126)):
+                if len(closes) > days:
+                    old = float(closes.iloc[-days - 1])
+                    if old > 0:
+                        rets[label] = (cur / old - 1) * 100
+            d5 = (cur / float(closes.iloc[-6]) - 1) * 100 if len(closes) > 6 else None
+            if "m3" not in rets:
+                continue
+            long_score = rets.get("m1", 0) * 0.5 + rets.get("m3", 0) * 0.3 + rets.get("m6", 0) * 0.2
+            rows[slug] = {"etf": code, "etf_name": name, "long_score": long_score, "short_score": d5 or 0,
+                          "ret_m1": round(rets.get("m1", 0), 2), "ret_m3": round(rets.get("m3", 0), 2),
+                          "ret_m6": round(rets.get("m6", 0), 2), "ret_d5": round(d5 or 0, 2)}
+        except Exception:
+            continue
+    # 백분위(0~100) — 섹터들 사이 상대 순위
+    def pct_rank(vals):
+        order = sorted(vals)
+        return {v: round(100 * i / max(1, len(order) - 1)) for i, v in enumerate(order)}
+    if rows:
+        lp = pct_rank([r["long_score"] for r in rows.values()])
+        sp = pct_rank([r["short_score"] for r in rows.values()])
+        for r in rows.values():
+            r["long_rs"] = lp[r.pop("long_score")]
+            r["short_rs"] = sp[r.pop("short_score")]
+    return rows
+
 
 # ── JSON NaN/Inf 세이프 변환 ──
 def _sanitize(obj):
@@ -718,6 +780,14 @@ async def main():
     except Exception as e:
         logger.warning("시가총액 조회 실패 (섹터 맵은 표시 생략): %s", e)
 
+    # 섹터 대표 ETF RS (섹터 맵 사분면용 — 17개 ETF, KIS 우선이라 KRX 차단 무관)
+    sector_etf_rs = {}
+    try:
+        sector_etf_rs = await _compute_sector_etf_rs()
+        logger.info("섹터 ETF RS: %d/%d 섹터", len(sector_etf_rs), len(SECTOR_ETFS))
+    except Exception as e:
+        logger.warning("섹터 ETF RS 실패 (섹터 맵 사분면 생략): %s", e)
+
     # 5) KOSPI 상태 + 히스토리 + 원장
     kospi = await fetch_kospi_status()
     _update_stage_history(state.setdefault("stage_history", {}), results)
@@ -754,6 +824,7 @@ async def main():
         "universe_size": len(scan_targets),
         "scanned": len(results),
         "kospi": kospi,
+        "sector_etf_rs": sector_etf_rs,
         "results": results,
     })
     # 전략 포트폴리오는 장마감 실행에서만 tracking.json을 새로 쓴다.
