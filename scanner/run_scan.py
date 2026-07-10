@@ -73,41 +73,61 @@ SECTOR_ETFS = {
 
 async def _compute_sector_etf_rs() -> dict:
     """섹터 대표 ETF의 장기 RS(1/3/6개월 가중 수익률 백분위)와 단기 모멘텀(5일 수익률 백분위).
-    사분면(부상/주도/과열/소외)용 — 유니버스 편향 없이 시장 전체 섹터 흐름을 반영한다."""
-    rows = {}
+    사분면(부상/주도/과열/소외)용. trail = 1주/2주/3주 전 시점의 스냅샷 — '최근 흐름' 궤적 표시용."""
+    closes_map = {}
     for slug, (code, name) in SECTOR_ETFS.items():
         try:
-            df = await fetch_ohlcv(code, days=280)
-            if df is None or len(df) < 130:
-                continue
-            closes = df["close"]
-            cur = float(closes.iloc[-1])
-            rets = {}
-            for label, days in (("m1", 21), ("m3", 63), ("m6", 126)):
-                if len(closes) > days:
-                    old = float(closes.iloc[-days - 1])
-                    if old > 0:
-                        rets[label] = (cur / old - 1) * 100
-            d5 = (cur / float(closes.iloc[-6]) - 1) * 100 if len(closes) > 6 else None
-            if "m3" not in rets:
-                continue
-            long_score = rets.get("m1", 0) * 0.5 + rets.get("m3", 0) * 0.3 + rets.get("m6", 0) * 0.2
-            rows[slug] = {"etf": code, "etf_name": name, "long_score": long_score, "short_score": d5 or 0,
-                          "ret_m1": round(rets.get("m1", 0), 2), "ret_m3": round(rets.get("m3", 0), 2),
-                          "ret_m6": round(rets.get("m6", 0), 2), "ret_d5": round(d5 or 0, 2)}
+            df = await fetch_ohlcv(code, days=300)
+            if df is not None and len(df) >= 150:
+                closes_map[slug] = (code, name, df["close"])
         except Exception:
             continue
-    # 백분위(0~100) — 섹터들 사이 상대 순위
+
     def pct_rank(vals):
         order = sorted(vals)
         return {v: round(100 * i / max(1, len(order) - 1)) for i, v in enumerate(order)}
-    if rows:
-        lp = pct_rank([r["long_score"] for r in rows.values()])
-        sp = pct_rank([r["short_score"] for r in rows.values()])
-        for r in rows.values():
-            r["long_rs"] = lp[r.pop("long_score")]
-            r["short_rs"] = sp[r.pop("short_score")]
-    return rows
+
+    def snapshot(offset):
+        """offset 거래일 전 시점의 섹터별 (장기점수, 단기점수, 기간수익률)"""
+        rows = {}
+        for slug, (code, name, closes) in closes_map.items():
+            c = closes.iloc[:-offset] if offset else closes
+            if len(c) < 130:
+                continue
+            cur = float(c.iloc[-1])
+            rets = {}
+            for label, days in (("m1", 21), ("m3", 63), ("m6", 126)):
+                if len(c) > days:
+                    old = float(c.iloc[-days - 1])
+                    if old > 0:
+                        rets[label] = (cur / old - 1) * 100
+            if "m3" not in rets:
+                continue
+            d5 = (cur / float(c.iloc[-6]) - 1) * 100 if len(c) > 6 else 0
+            rows[slug] = {"long": rets.get("m1", 0) * 0.5 + rets.get("m3", 0) * 0.3 + rets.get("m6", 0) * 0.2,
+                          "short": d5, "rets": rets}
+        if not rows:
+            return {}
+        lp = pct_rank([r["long"] for r in rows.values()])
+        sp = pct_rank([r["short"] for r in rows.values()])
+        return {slug: {"long_rs": lp[r["long"]], "short_rs": sp[r["short"]], "rets": r["rets"], "d5": r["short"]}
+                for slug, r in rows.items()}
+
+    snaps = {k: snapshot(off) for k, off in (("now", 0), ("w1", 5), ("w2", 10), ("w3", 15))}
+    out = {}
+    for slug, (code, name, _c) in closes_map.items():
+        cur = snaps["now"].get(slug)
+        if not cur:
+            continue
+        out[slug] = {
+            "etf": code, "etf_name": name,
+            "long_rs": cur["long_rs"], "short_rs": cur["short_rs"],
+            "ret_m1": round(cur["rets"].get("m1", 0), 2), "ret_m3": round(cur["rets"].get("m3", 0), 2),
+            "ret_m6": round(cur["rets"].get("m6", 0), 2), "ret_d5": round(cur["d5"], 2),
+            "trail": [{"k": k, "long_rs": snaps[k][slug]["long_rs"], "short_rs": snaps[k][slug]["short_rs"]}
+                      for k in ("w1", "w2", "w3") if slug in snaps.get(k, {})],
+        }
+    return out
 
 
 # ── JSON NaN/Inf 세이프 변환 ──
