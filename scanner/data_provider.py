@@ -77,6 +77,41 @@ def _get_token_lock() -> asyncio.Lock:
     return _kis_token_lock
 
 
+# 실행(러너) 간 토큰 공유 — Worker KV. KIS 토큰은 24시간 유효 + 재발급 시 기존 무효화될 수 있어
+# 하루 1회 발급이 원칙인데, Actions는 실행마다 새 프로세스라 KV에 보관해 재사용한다.
+_NEXUS_BASE = "https://nexus-platform.nexusassetfund.workers.dev"
+
+
+def _nexus_admin_token() -> Optional[str]:
+    return os.environ.get("NEXUS_ADMIN_TOKEN") or None
+
+
+async def _kis_token_remote_get() -> Optional[dict]:
+    tk = _nexus_admin_token()
+    if not tk:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            r = await client.get(f"{_NEXUS_BASE}/api/kis/token", headers={"authorization": f"Bearer {tk}"})
+            if r.status_code == 200:
+                return r.json()
+    except Exception:
+        pass
+    return None
+
+
+async def _kis_token_remote_put(token: str, expires_at: float) -> None:
+    tk = _nexus_admin_token()
+    if not tk:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            await client.put(f"{_NEXUS_BASE}/api/kis/token", headers={"authorization": f"Bearer {tk}"},
+                             json={"access_token": token, "expires_at": expires_at})
+    except Exception:
+        pass
+
+
 async def _get_kis_token(cfg: dict) -> Optional[str]:
     global _kis_token, _kis_token_expires, _kis_token_fail_until
     kis = cfg.get("kis", {})
@@ -91,6 +126,13 @@ async def _get_kis_token(cfg: dict) -> Optional[str]:
         # 락 획득 후 재확인 (다른 코루틴이 이미 발급했을 수 있음)
         now = dt.datetime.now().timestamp()
         if _kis_token and now < _kis_token_expires - 60:
+            return _kis_token
+        # 실행 간 공유 토큰(Worker KV) — 다른 러너가 이미 발급한 24시간 토큰 재사용
+        remote = await _kis_token_remote_get()
+        if remote and now < float(remote.get("expires_at") or 0) - 3600:
+            _kis_token = remote["access_token"]
+            _kis_token_expires = float(remote["expires_at"])
+            logger.info("KIS 토큰 공유 저장소에서 재사용 (만료: %.0f초 후)", _kis_token_expires - now)
             return _kis_token
         # 직전 발급이 실패했으면 쿨다운 동안 재요청하지 않음 — 토큰 요청 폭주 방지.
         # KIS는 토큰 발급을 1분당 1회로 제한(403 EGW00133)하므로, 실패 직후
@@ -123,6 +165,7 @@ async def _get_kis_token(cfg: dict) -> Optional[str]:
                 _kis_token_expires = now + int(data.get("expires_in") or 86400)
                 _kis_token_fail_until = 0
                 logger.info("KIS 토큰 발급 성공 (만료: %.0f초 후)", _kis_token_expires - now)
+                await _kis_token_remote_put(token, _kis_token_expires)  # 다음 러너가 재사용
         except Exception as e:
             # 빈 응답/타임아웃 등도 동일하게 쿨다운 — 재요청 폭주 방지
             _kis_token_fail_until = now + _KIS_TOKEN_FAIL_COOLDOWN
