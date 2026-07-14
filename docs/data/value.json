@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-14T21:08:53+09:00",
+  "updated": "2026-07-14T21:14:39+09:00",
   "dart": true,
   "universe": [
     {
@@ -586,7 +586,7 @@
       "target_price": 2987000,
       "stop_loss": null,
       "thesis": null,
-      "memo": "",
+      "memo": "리뷰 예정 (넥서스 편집기 테스트 2026-07-14)",
       "financials": [
         {
           "year": 2020,
