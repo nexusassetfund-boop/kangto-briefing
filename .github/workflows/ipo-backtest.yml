@@ -1,0 +1,35 @@
+name: Post IPO 백테스터 데이터
+# my-first-pr(hsjoo31-cpu)의 ipo_updater를 넥서스로 이식 (2026-07-14).
+# 산출물은 repo에 커밋하지 않고 Worker KV(ipo_backtest.json)로만 게시한다.
+on:
+  schedule:
+    - cron: "0 23 * * *"   # 매일 KST 08:00 — 전일 종가까지 반영 (GitHub 지연 15~40분 상습)
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency: { group: ipo-backtest, cancel-in-progress: false }
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+      - name: 기존 KV 데이터 확보 (공모가 보존용 — finuts 롤링 윈도우 공백 방지)
+        run: |
+          mkdir -p docs/data
+          curl -sf --max-time 60 "https://nexus-platform.nexusassetfund.workers.dev/data/ipo_backtest.json" \
+            -o docs/data/ipo_backtest.json || echo "기존 데이터 없음 — 신규 수집"
+      - name: IPO 데이터 수집
+        run: python scanner/ipo_fetcher.py
+      - name: Worker KV 게시
+        env:
+          NEXUS_ADMIN_TOKEN: ${{ secrets.NEXUS_ADMIN_TOKEN }}
+        run: python scanner/post_ipo_backtest.py
