@@ -52,7 +52,4 @@ jobs:
 
       - name: 결과 커밋
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data/weekly_review.json
-          git diff --cached --quiet || (git commit -m "review: $(TZ=Asia/Seoul date '+%Y-%m-%d') 주간 복기" && git pull --rebase origin main && git push)
+          bash .github/scripts/commit-data.sh "review: $(TZ=Asia/Seoul date '+%Y-%m-%d') 주간 복기" docs/data/weekly_review.json
