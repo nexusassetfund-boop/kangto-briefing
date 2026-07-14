@@ -379,7 +379,9 @@ async def fetch_ohlcv(ticker: str, days: int = 400) -> pd.DataFrame:
                 loop.run_in_executor(None, _fetch_ohlcv_fdr, ticker, start_str, end_str),
                 timeout=15.0,
             )
-            if not df.empty:
+            # KIS·pykrx와 동일하게 >50행 요구 — 부분 응답(20~40행)이 52주 범위·추세 계산을
+            # 왜곡하지 않도록. 상장 이력이 짧은 종목은 여기서 빈 프레임 반환(계산 불가라 정상).
+            if not df.empty and len(df) > 50:
                 _src_report("fdr", True)
                 return df
             _src_report("fdr", False)

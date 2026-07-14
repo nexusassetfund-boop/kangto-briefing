@@ -21,6 +21,7 @@
 """
 from __future__ import annotations
 import asyncio
+import sys
 import datetime as dt
 import json
 import logging
@@ -190,6 +191,13 @@ async def build() -> dict | None:
     if not fund:
         logger.error("펀더멘털 조회 전체 실패(pykrx·KIS) — 기존 출력 보존, 스크리닝 중단")
         return None
+    # 커버리지 바닥: KIS 폴백이 일부만 반환(토큰 쿨다운·레이트리밋)하면 near-empty 후보가
+    # 기존 좋은 파일을 덮어쓸 수 있으므로, 유니버스 절반 미만이면 보존하고 중단.
+    # (pykrx 성공 시 fund는 전 시장 ~2700개라 이 가드에 안 걸림 — KIS 부분실패 경로만 차단)
+    if len(fund) < len(constituents) // 2:
+        logger.error("펀더멘털 커버리지 %d/%d 미달(부분 실패) — 기존 출력 보존, 중단",
+                     len(fund), len(constituents))
+        return None
     exclude = _existing_codes()
 
     # 1차: 밸류 필터 + 자체 적정가/안전마진
@@ -289,7 +297,9 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     result = asyncio.run(build())
     if result is None:
-        return  # 기존 파일 보존
+        # 기존 파일 보존 + 워크플로 red 노출(조용한 stale 방지 — 주 1회 캐이던스라 실패가 묻히면 위험)
+        logger.error("스크리닝 실패 — 기존 파일 보존, exit 1")
+        sys.exit(1)
     new_state = result.pop("_state", {})
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

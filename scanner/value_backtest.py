@@ -49,7 +49,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from backtest import BUY_SLIP, SELL_SLIP, SELL_TAX, COMMISSION_RT, CACHE_DIR, load_kospi
 from run_scan import _calc_fair_value, _fnum
-from value_screen import MIN_CAP, PER_MAX, PBR_MAX, MARGIN_MIN, FSCORE_MIN, TOP_FSCORE, TOP_OUT
+from value_screen import (MIN_CAP, PER_MAX, PBR_MAX, MARGIN_MIN, FSCORE_MIN, TOP_FSCORE, TOP_OUT,
+                          MOM_WIN, MOM_SKIP)
 import fetch_value
 
 logger = logging.getLogger("value_backtest")
@@ -68,7 +69,9 @@ def _base_params() -> dict:
         "top_fscore": TOP_FSCORE, "top": TOP_OUT,
         "report_month": 5, "use_fscore": True,
         # sort: fscore_margin(실서비스 원본) | momentum(밸류 관문 + 모멘텀 정렬, F-Score는 컷 전용)
-        "sort": "fscore_margin", "mom_win": 126, "mom_skip": 0,
+        # mom_win/skip은 실서비스(value_screen.py)의 12-1 모멘텀과 동일하게 맞춤 —
+        # --sort momentum 시 별도 플래그 없이도 라이브 전략을 그대로 재현.
+        "sort": "fscore_margin", "mom_win": MOM_WIN, "mom_skip": MOM_SKIP,
     }
 
 
@@ -226,7 +229,7 @@ def _value_gate(universe, fund, cap, p) -> list[dict]:
         if c.get("cap") is None or c["cap"] < p["min_cap"]:
             continue
         per, pbr, eps, bps = f["per"], f["pbr"], f["eps"], f["bps"]
-        if not (eps and bps):
+        if not eps or not bps or eps <= 0 or bps <= 0:  # 적자·자본잠식 명시 배제(라이브 _fnum과 동일)
             continue
         price = c["close"]
         per = per or round(price / eps, 1)
@@ -641,8 +644,8 @@ def main():
     ap.add_argument("--fscore-min", type=int, default=FSCORE_MIN)
     ap.add_argument("--no-fscore", action="store_true")
     ap.add_argument("--sort", choices=["fscore_margin", "margin", "momentum"], default="fscore_margin")
-    ap.add_argument("--mom-win", type=int, default=126, help="모멘텀 룩백 거래일 (126=6M)")
-    ap.add_argument("--mom-skip", type=int, default=0, help="최근 N거래일 제외 (21=12-1식 반전 회피)")
+    ap.add_argument("--mom-win", type=int, default=MOM_WIN, help="모멘텀 룩백 거래일 (기본=라이브 12-1)")
+    ap.add_argument("--mom-skip", type=int, default=MOM_SKIP, help="최근 N거래일 제외 (기본=라이브 12-1)")
     ap.add_argument("--full-rebalance", action="store_true")
     ap.add_argument("--slip-mult", type=float, default=1.0)
     ap.add_argument("--report-month", type=int, default=5)

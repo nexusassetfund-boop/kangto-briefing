@@ -37,7 +37,6 @@ jobs:
         env:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
-          NEXUS_ADMIN_TOKEN: ${{ secrets.NEXUS_ADMIN_TOKEN }}
         run: python scanner/run_scan.py
 
       - name: 결과 커밋
