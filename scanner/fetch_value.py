@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import re
+import sys
 import urllib.request
 import urllib.error
 import zipfile
@@ -222,11 +223,14 @@ def _fscore(corp: str, year: int | None = None) -> dict | None:
         return None
 
     def get(nm, sj, per):
+        # DART account_nm은 회사마다 공백 유무가 달라("영업활동현금흐름" vs "영업활동 현금흐름")
+        # 공백을 제거해 비교한다. 그러지 않으면 CFO 등 다어절 계정이 대부분 매칭 실패한다.
+        nmz = nm.replace(" ", "")
         for x in rows:
             if x.get("sj_div") != sj:
                 continue
-            a = x.get("account_nm", "")
-            if a == nm or a == nm + "(손실)" or a.startswith(nm):
+            a = (x.get("account_nm", "") or "").replace(" ", "")
+            if a == nmz or a == nmz + "(손실)" or a.startswith(nmz):
                 return _num(x.get(per + "_amount"))
         return None
 
@@ -242,6 +246,8 @@ def _fscore(corp: str, year: int | None = None) -> dict | None:
     GP_t, GP_p = pair("매출총이익", "CIS")
     NI_t, NI_p = pair("당기순이익", "CIS")
     CFO_t, CFO_p = pair("영업활동 현금흐름", "CF")
+    if CFO_t is None:  # 다른 표기 변형("영업활동으로 인한 현금흐름") 폴백
+        CFO_t, CFO_p = pair("영업활동으로 인한 현금흐름", "CF")
     if REV_t is None:
         REV_t, REV_p = pair("매출액", "IS")
     if GP_t is None:
@@ -337,10 +343,18 @@ def _enrich(rec: dict) -> dict:
     return out
 
 
-def build() -> dict:
+def build() -> dict | None:
     data = json.loads(INPUT_PATH.read_text(encoding="utf-8"))
     universe = [_enrich(r) for r in data.get("universe", [])]
     portfolio = [_enrich(r) for r in data.get("portfolio", [])]
+    # DART 장애 감지: 키가 있고 종목도 있는데 재무가 절반도 안 붙으면 일시 장애로 보고
+    # 공백본으로 기존 value.json을 덮어쓰지 않는다(value_screen과 동일한 보존 정책).
+    entries = universe + portfolio
+    if DART_KEY and entries:
+        enriched = sum(1 for e in entries if e.get("f_score") or e.get("financials"))
+        if enriched < max(1, len(entries) // 2):
+            logger.error("DART 재무 확보 %d/%d — 일시 장애 의심, 기존 value.json 보존", enriched, len(entries))
+            return None
     return {
         "updated": dt.datetime.now(tz=KST).isoformat(timespec="seconds"),
         "dart": bool(DART_KEY),
@@ -354,6 +368,10 @@ def main():
     if not DART_KEY:
         logger.warning("DART_API_KEY 없음 — 재무 지표 없이 입력값만 출력")
     d = build()
+    if d is None:
+        # 기존 파일 보존 + 워크플로에 실패 노출(조용한 stale 방지). 후속 KV push 스텝도 스킵됨.
+        logger.error("재무 확보 실패 — 기존 파일 보존, exit 1")
+        sys.exit(1)
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("저장: %s (유니버스 %d, 포트폴리오 %d)", OUT_PATH, len(d["universe"]), len(d["portfolio"]))

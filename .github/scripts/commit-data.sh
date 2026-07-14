@@ -23,15 +23,18 @@ if git diff --cached --quiet; then
 fi
 git commit -m "$MSG"
 
-for i in 1 2 3 4 5; do
+# 8회 재시도 + 증가 백오프(3,6,9,… + 지터). 마감 close-run은 원장 이벤트가 하루 1회만
+# 증분돼 push 유실 시 복구 경로가 없으므로, 지속 경합에도 살아남도록 재시도를 넉넉히 둔다.
+ATTEMPTS=8
+for i in $(seq 1 $ATTEMPTS); do
   if git pull --rebase -X theirs origin "${GITHUB_REF_NAME}" && git push; then
     echo "push 성공 (시도 $i)"
     exit 0
   fi
   git rebase --abort 2>/dev/null || true   # 재시도 전 rebase 상태 정리(커밋은 보존됨)
-  echo "push 경합 — 재시도 $i/5"
-  sleep $((RANDOM % 4 + 2))
+  echo "push 경합 — 재시도 $i/$ATTEMPTS"
+  sleep $(( i * 3 + RANDOM % 3 ))
 done
 
-echo "push 5회 재시도 실패" >&2
+echo "push $ATTEMPTS회 재시도 실패" >&2
 exit 1

@@ -564,21 +564,26 @@ def _fetch_index_constituents_sync() -> list[tuple[str, str]]:
     else:
         logger.warning("pykrx 거래일 감지 실패 — FDR fallback으로 전환")
 
-    # pykrx 실패 시 FinanceDataReader fallback
-    if len(tickers) < 100:
-        logger.info("pykrx 지수 조회 부족 (%d개) — FDR fallback 시도", len(tickers))
-        tickers, seen = _fetch_constituents_fdr_fallback()
+    # pykrx 지수 예탁파일에서 직접 얻었는가 — 이 경우만 "진짜 지수 구성"으로 신뢰
+    from_pykrx = len(tickers) >= 100
 
-    # KRX·FDR 모두 차단된 시간대 → 마지막 성공 캐시로 완주 (구성은 반기 단위라 안전)
-    if len(tickers) < 100:
+    if not from_pykrx:
+        # pykrx 실패: FDR 근사(시총 상위 350)보다 마지막 성공 캐시가 정확하므로 캐시 우선.
+        # (FDR 폴백은 진짜 코스피200/코스닥150 편입이 아닌 시총 근사치라 캐시를 오염시키면 안 됨)
+        logger.info("pykrx 지수 조회 부족 (%d개) — 캐시 우선 확인", len(tickers))
         cached = _load_universe_cache()
         if len(cached) >= 100:
-            logger.warning("KRX/FDR 모두 실패 — 유니버스 캐시 %d종목으로 대체", len(cached))
+            logger.warning("pykrx 실패 — 유니버스 캐시 %d종목 사용 (FDR 근사보다 정확)", len(cached))
             return cached
-    else:
+        # 캐시도 없을 때만 최후 수단으로 FDR 시총 근사 사용 (캐시에 저장하지 않음)
+        logger.warning("pykrx·캐시 모두 실패 — FDR 시총 근사로 완주 (진짜 지수 구성 아님, 캐시 미갱신)")
+        tickers, seen = _fetch_constituents_fdr_fallback()
+
+    # 진짜 지수 구성(pykrx)일 때만 캐시 저장 — FDR 근사가 last-known-good을 덮어쓰지 못하게
+    if from_pykrx:
         _save_universe_cache(tickers)
 
-    logger.info("지수 구성종목 총 %d개 (중복 제거)", len(tickers))
+    logger.info("지수 구성종목 총 %d개 (중복 제거, 소스=%s)", len(tickers), "pykrx" if from_pykrx else "fdr근사")
     return tickers
 
 
@@ -594,19 +599,23 @@ def _fetch_constituents_fdr_fallback() -> tuple[list[tuple[str, str]], set]:
         try:
             df = fdr.StockListing(market)
             if df is not None and not df.empty:
+                # 시총 컬럼(Marcap/Amount)이 있으면 시총 내림차순 정렬 — 리스팅 순서(무작위)보다
+                # 지수 구성(대형주)에 훨씬 근접. 실제 코스피200/코스닥150 편입은 아니므로 근사치.
+                capcol = next((c for c in ("Marcap", "MarketCap", "Amount") if c in df.columns), None)
+                if capcol:
+                    df = df.sort_values(capcol, ascending=False)
                 for _, row in df.iterrows():
                     code = str(row.get("Code", "")).strip()
                     name = str(row.get("Name", code)).strip()
                     if len(code) == 6 and code.isdigit() and code not in seen:
                         all_stocks.append((code, name, market))
                         seen.add(code)
-                logger.info("FDR %s: %d 종목 로드", market, len(df))
+                logger.info("FDR %s: %d 종목 로드 (%s)", market, len(df),
+                            f"시총순 {capcol}" if capcol else "리스팅순")
         except Exception as e:
             logger.warning("FDR %s 로드 실패: %s", market, e)
 
-    # FDR StockListing은 시가총액 순이 아닐 수 있으므로
-    # pykrx OHLCV가 작동하므로 거래량으로 주요 종목 필터링은 하지 않고
-    # KOSPI 상위 200 + KOSDAQ 상위 150 선택 (리스팅 순서 사용)
+    # 시총 상위 KOSPI 200 + KOSDAQ 150 근사 (정렬됐으면 시총 상위, 아니면 리스팅 순서)
     kospi = [(c, n) for c, n, m in all_stocks if m == "KOSPI"][:200]
     kosdaq = [(c, n) for c, n, m in all_stocks if m == "KOSDAQ"][:150]
 
