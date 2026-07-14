@@ -21,7 +21,7 @@ import os
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from data_provider import fetch_index_constituents, fetch_ohlcv
+from data_provider import fetch_index_constituents, fetch_ohlcv, fetch_fundamental_kis, load_config
 from run_scan import _calc_fair_value, _fnum
 import fetch_value
 
@@ -141,6 +141,24 @@ async def _technicals(code: str) -> dict:
     }
 
 
+async def _kis_fundamentals(constituents) -> tuple[dict, dict]:
+    """KIS 폴백 — 유니버스 종목만 개별 조회 (KRX가 클라우드 IP를 차단할 때).
+    배당수익률은 KIS 응답에 없어 None (필터가 아닌 표시용이라 무해)."""
+    cfg = load_config()
+    sem = asyncio.Semaphore(3)  # KIS 초당 호출 제한 보호
+    fund, cap = {}, {}
+
+    async def one(code):
+        async with sem:
+            fb = await fetch_fundamental_kis(cfg, code)
+        if fb and fb.get("price"):
+            fund[code] = {k: fb.get(k) for k in ("per", "pbr", "eps", "bps", "div")}
+            cap[code] = {"cap": fb.get("cap"), "close": fb.get("price")}
+
+    await asyncio.gather(*(one(code) for code, _ in constituents))
+    return fund, cap
+
+
 async def build() -> dict | None:
     constituents = await fetch_index_constituents()
     limit = int(os.environ.get("VALUE_SCREEN_LIMIT", "0") or 0)
@@ -148,7 +166,11 @@ async def build() -> dict | None:
         constituents = constituents[:limit]
     fund, cap, base_date = _market_fundamentals()
     if not fund:
-        logger.error("펀더멘털 조회 전체 실패 — 기존 출력 보존, 스크리닝 중단")
+        logger.warning("pykrx 펀더멘털 실패 — KIS 폴백으로 전환 (%d종목 개별 조회)", len(constituents))
+        fund, cap = await _kis_fundamentals(constituents)
+        base_date = dt.datetime.now(tz=KST).date().strftime("%Y%m%d")
+    if not fund:
+        logger.error("펀더멘털 조회 전체 실패(pykrx·KIS) — 기존 출력 보존, 스크리닝 중단")
         return None
     exclude = _existing_codes()
 

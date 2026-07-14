@@ -716,6 +716,35 @@ async def fetch_realtime_prices_batch(
 
 
 # ── KIS 실시간 현재가 ────────────────────────────────────
+async def fetch_fundamental_kis(cfg: dict, ticker: str) -> Optional[dict]:
+    """KIS 현재가 시세(FHKST01010100)에서 밸류 지표 추출 — pykrx(KRX) 차단 시 폴백.
+    반환: {price, per, pbr, eps, bps, cap(원), div(None — KIS 응답에 배당수익률 없음)}"""
+    data = await kis_get(
+        cfg,
+        "/uapi/domestic-stock/v1/quotations/inquire-price",
+        "FHKST01010100",
+        {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": ticker},
+    )
+    if not (data and data.get("output")):
+        return None
+    out = data["output"]
+
+    def f(k):
+        try:
+            v = float(out.get(k) or 0)
+        except (TypeError, ValueError):
+            return None
+        return v if v > 0 else None
+
+    cap = f("hts_avls")  # HTS 시가총액 (억원)
+    return {
+        "price": f("stck_prpr"),
+        "per": f("per"), "pbr": f("pbr"), "eps": f("eps"), "bps": f("bps"),
+        "cap": cap * 1e8 if cap else None,
+        "div": None,
+    }
+
+
 async def fetch_realtime_price(cfg: dict, ticker: str) -> Optional[dict]:
     """KIS로 현재가 조회"""
     data = await kis_get(

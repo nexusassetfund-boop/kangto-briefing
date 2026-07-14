@@ -770,6 +770,21 @@ async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
     except Exception as e:
         logger.warning("pykrx 밸류 지표 실패(무시): %s", e)
 
+    # pykrx 결측 종목은 KIS 개별 조회로 보완 (KRX 클라우드 IP 차단 대비 — 가치 종목은 10개 미만이라 저렴)
+    missing = [c for c in meta if not fund_map.get(c)]
+    if missing:
+        try:
+            from data_provider import fetch_fundamental_kis, load_config as _load_cfg
+            _cfg = _load_cfg()
+            for c in missing:
+                fb = await fetch_fundamental_kis(_cfg, c)
+                if fb:
+                    fund_map[c] = {k: fb.get(k) for k in ("per", "pbr", "eps", "bps", "div")}
+                    if fb.get("cap") and c not in cap_map:
+                        cap_map[c] = fb["cap"]
+        except Exception as e:
+            logger.warning("KIS 밸류 폴백 실패(무시): %s", e)
+
     # DART 확정 ROE (value.json metrics) — RIM 적정가 입력. 없으면 EPS/BPS로 근사.
     roe_map: dict = {}
     try:
