@@ -15,3 +15,4 @@ analysis.txt
 transactions-all.json
 briefing_input.json
 briefing_output.json
+tmp/

@@ -200,9 +200,11 @@ _FS_LABELS = [
 ]
 
 
-def _fscore(corp: str) -> dict | None:
-    """Piotroski F-Score(9점) — DART 전체재무제표(연결, 최근 사업연도)로 t vs t-1 비교."""
-    year = dt.datetime.now(tz=KST).year - 1
+def _fscore(corp: str, year: int | None = None) -> dict | None:
+    """Piotroski F-Score(9점) — DART 전체재무제표(연결)로 t vs t-1 비교.
+    year 미지정 시 최근 확정 사업연도(작년). 백테스트는 포인트인타임 연도를 넘긴다."""
+    if year is None:
+        year = dt.datetime.now(tz=KST).year - 1
     rows = None
     for fs in ("CFS", "OFS"):
         url = (f"{_DART}/fnlttSinglAcntAll.json?crtfc_key={DART_KEY}&corp_code={corp}"
