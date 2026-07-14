@@ -28,7 +28,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           test -f docs/data/value_screen.json || { echo "출력 없음 — 커밋 생략"; exit 0; }
-          git add docs/data/value_screen.json
+          git add docs/data   # universe_cache 등 부산물 포함 (scan.yml과 동일 — unstaged 잔여로 rebase 실패 방지)
           git diff --cached --quiet || (git commit -m "value-screen: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M KST')" && git pull --rebase origin main && git push)
       - name: KV 즉시 반영 (다음 스캔 동기화 대기 없이)
         env: { NEXUS_ADMIN_TOKEN: "${{ secrets.NEXUS_ADMIN_TOKEN }}" }
