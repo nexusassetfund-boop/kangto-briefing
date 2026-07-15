@@ -1,15 +1,15 @@
 {
- "updated": "2026-07-15T15:38:35+09:00",
+ "updated": "2026-07-15T16:17:14+09:00",
  "kospi": {
-  "price": 7413.26,
-  "ma200": 5567.94,
-  "ma50": 7987.5,
+  "price": 7289.16,
+  "ma200": 5567.32,
+  "ma50": 7985.02,
   "above_ma200": true,
   "above_ma50": false,
   "ma50_declining": false,
   "exit_signal": false,
   "entry_allowed": true,
-  "updated": "2026-07-15T15:38:35+09:00"
+  "updated": "2026-07-15T16:17:14+09:00"
  },
  "holdings": [
   {
@@ -175,7 +175,7 @@
    "was_extended": false,
    "days_held": 0,
    "stage_now": null,
-   "confidence_now": 83,
+   "confidence_now": 15,
    "last_updated": "2026-07-15",
    "signals_at_entry": [
     "웨지 팝: 10·20 EMA 동시 탈환, 거래량 2.08x",
