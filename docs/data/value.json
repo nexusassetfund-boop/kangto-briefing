@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-14T21:14:39+09:00",
+  "updated": "2026-07-15T09:38:00+09:00",
   "dart": true,
   "universe": [
     {
@@ -150,12 +150,12 @@
       },
       "quality_score": 28,
       "f_score": {
-        "score": 2,
+        "score": 4,
         "components": {
           "ROA>0": 0,
-          "CFO>0": 0,
+          "CFO>0": 1,
           "dROA>0": 0,
-          "CFO>NI": 0,
+          "CFO>NI": 1,
           "dLev<0": 0,
           "dCurr>0": 1,
           "noNewShares": 1,
@@ -306,12 +306,12 @@
       },
       "quality_score": 59,
       "f_score": {
-        "score": 3,
+        "score": 5,
         "components": {
           "ROA>0": 1,
-          "CFO>0": 0,
+          "CFO>0": 1,
           "dROA>0": 0,
-          "CFO>NI": 0,
+          "CFO>NI": 1,
           "dLev<0": 1,
           "dCurr>0": 1,
           "noNewShares": 0,
@@ -462,10 +462,10 @@
       },
       "quality_score": 76,
       "f_score": {
-        "score": 2,
+        "score": 3,
         "components": {
           "ROA>0": 1,
-          "CFO>0": 0,
+          "CFO>0": 1,
           "dROA>0": 0,
           "CFO>NI": 0,
           "dLev<0": 0,
@@ -549,10 +549,10 @@
       },
       "quality_score": 62,
       "f_score": {
-        "score": 5,
+        "score": 6,
         "components": {
           "ROA>0": 1,
-          "CFO>0": 0,
+          "CFO>0": 1,
           "dROA>0": 1,
           "CFO>NI": 0,
           "dLev<0": 0,
@@ -577,92 +577,6 @@
     }
   ],
   "portfolio": [
-    {
-      "name": "SK하이닉스",
-      "code": "000660",
-      "buy_date": "2026-07-01",
-      "buy_price": 2650000,
-      "qty": 21,
-      "target_price": 2987000,
-      "stop_loss": null,
-      "thesis": null,
-      "memo": "리뷰 예정 (넥서스 편집기 테스트 2026-07-14)",
-      "financials": [
-        {
-          "year": 2020,
-          "revenue": 31900418000000.0,
-          "op": 5012624000000.0,
-          "ni": 4758914000000.0
-        },
-        {
-          "year": 2021,
-          "revenue": 42997792000000.0,
-          "op": 12410340000000.0,
-          "ni": 9616188000000.0
-        },
-        {
-          "year": 2022,
-          "revenue": 44621568000000.0,
-          "op": 6809417000000.0,
-          "ni": 2241669000000.0
-        },
-        {
-          "year": 2023,
-          "revenue": 32765719000000.0,
-          "op": -7730313000000.0,
-          "ni": -9137547000000.0
-        },
-        {
-          "year": 2024,
-          "revenue": 66192960000000.0,
-          "op": 23467319000000.0,
-          "ni": 19796902000000.0
-        },
-        {
-          "year": 2025,
-          "revenue": 97146675000000.0,
-          "op": 47206319000000.0,
-          "ni": 42947902000000.0
-        }
-      ],
-      "metrics": {
-        "year": 2025,
-        "roe": 35.6,
-        "op_margin": 48.6,
-        "net_margin": 44.2,
-        "debt_ratio": 45.9,
-        "current_ratio": 185.8,
-        "rev_growth": 46.8,
-        "ni_growth": 116.9
-      },
-      "quality_score": 100,
-      "f_score": {
-        "score": 8,
-        "components": {
-          "ROA>0": 1,
-          "CFO>0": 1,
-          "dROA>0": 1,
-          "CFO>NI": 1,
-          "dLev<0": 1,
-          "dCurr>0": 1,
-          "noNewShares": 1,
-          "dMargin>0": 1,
-          "dTurn>0": 0
-        },
-        "year": 2025
-      },
-      "company": {
-        "ceo": "곽노정",
-        "est": "1949-10-15",
-        "market": "코스피",
-        "homepage": "www.skhynix.com",
-        "address": "경기도 이천시  부발읍 경충대로 2091"
-      },
-      "biz_summary": {
-        "date": "2026/06/01",
-        "text": "AI 수요 급증으로 최대 실적 경신 동사는 1949년 설립되어 2012년 에스케이하이닉스로 상호를 변경하였으며, 경기도 이천 본사를 거점으로 운영하는 글로벌 반도체 기업임. DRAM과 NAND Flash 중심의 메모리 반도체가 주력 제품이며, Foundry 사업도 병행하고 있음. 업계 최고 기술력으로 HBM, CXL 메모리 등 차세대 제품 개발에 집중하고 AI 메모리 시장 선도를 위해 고객 협업과 선단 공정 양산을 추진하고 있음. 2026년 1분기 전년동기 대비 연결기준 매출액은 198.1% 증가, 영업이익은 405.5% 증가, 당기순이익은 397.5% 증가. AI 인프라 투자 확대에 따라 DRAM·NAND 가격이 큰 폭으로 상승했으며, 서버 DRAM과 eSSD가 상승을 주도함. AI 기반 고성능·고용량 메모리 수요 증가로 분기 매출은 50조원을 돌파했으며, 사상 최대 영업이익을 경신 중임."
-      }
-    },
     {
       "name": "신세계",
       "code": "004170",
@@ -723,12 +637,12 @@
       },
       "quality_score": 28,
       "f_score": {
-        "score": 2,
+        "score": 4,
         "components": {
           "ROA>0": 0,
-          "CFO>0": 0,
+          "CFO>0": 1,
           "dROA>0": 0,
-          "CFO>NI": 0,
+          "CFO>NI": 1,
           "dLev<0": 0,
           "dCurr>0": 1,
           "noNewShares": 1,
