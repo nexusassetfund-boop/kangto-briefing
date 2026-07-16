@@ -858,12 +858,17 @@ async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
         margin = round((fair - price) / fair * 100, 1) if (fair and price) else None
         near_low = bool(low52 and price <= low52 * 1.1)
         watch = []
-        if upside is not None and upside >= 20:
-            watch.append("목표가 대비 저평가")
-        if margin is not None and margin >= 20:
-            watch.append("안전마진 충분")
-        if near_low:
-            watch.append("52주 저점 근접")
+        # 자체 적정가(RIM·Graham)가 현재가보다 낮으면(안전마진 음수) 내재가치 기준 고평가다.
+        # 이때 목표가(수동, 낙관적일 수 있음)·52주저점 신호로 "저평가"를 붙이면 적정가와
+        # 모순 → 배지를 붙이지 않는다. (수동 적정가면 margin이 그 기준이므로 fair_src로 구분)
+        overvalued = fair_src == "calc" and margin is not None and margin < 0
+        if not overvalued:
+            if upside is not None and upside >= 20:
+                watch.append("목표가 대비 저평가")
+            if margin is not None and margin >= 20:
+                watch.append("안전마진 충분")
+            if near_low:
+                watch.append("52주 저점 근접")
         items[code] = {
             "price": round(price), "change_pct": change_pct, "per": per_str, "mktcap": mktcap_str,
             "pbr": pbr_v, "div": div_v, "eps": eps, "bps": bps, "roe": roe,
