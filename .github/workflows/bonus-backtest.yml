@@ -22,6 +22,11 @@ jobs:
           cache: "pip"
       - name: 의존성 설치
         run: pip install -r requirements.txt
+      - name: 기존 KV 데이터 확보 (시가총액 보존용 — 매수일 시총은 최초 확정값 유지)
+        run: |
+          mkdir -p docs/data
+          curl -sf --max-time 60 "https://nexus-platform.nexusassetfund.workers.dev/data/bonus_backtest.json" \
+            -o docs/data/bonus_backtest.json || echo "기존 데이터 없음 — 신규 수집"
       - name: 무상증자 데이터 수집
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}

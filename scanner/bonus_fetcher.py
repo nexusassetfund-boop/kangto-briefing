@@ -231,6 +231,20 @@ def main():
     price_cache: dict[str, list[dict]] = {}  # ticker → 전체 구간 일봉 (동일종목 복수 이벤트 공유)
     events: list[dict] = []
 
+    # 기존 KV 데이터에서 시가총액 보존 — 매수일 시총은 불변의 과거 사실이므로
+    # 이벤트 발생 직후(가격이 명목가일 때) 한 번 확정한 값을 계속 쓴다.
+    # 이후 다른 무증·분할로 수정주가가 재조정돼도 저장값은 영향받지 않는다.
+    existing_mcap: dict[tuple[str, str], tuple] = {}
+    if OUT.exists():
+        try:
+            old = json.loads(OUT.read_text("utf-8"))
+            for e in old.get("events", []):
+                existing_mcap[(e["ticker"], e["disc_date"])] = (e.get("mcap_d0"), e.get("mcap_d1"))
+            n_kept = sum(1 for v in existing_mcap.values() if v[0] is not None)
+            print(f"  기존 데이터 시총 보존: {n_kept}건")
+        except Exception:
+            pass
+
     # 종목별 필요 구간: 가장 이른 공시 2주 전 ~ 오늘
     earliest: dict[str, str] = {}
     for r in rows:
@@ -265,7 +279,11 @@ def main():
         prices = all_prices[max(0, idx0 - PRE_BARS): idx0 + MAX_BARS_AFTER]
 
         det = details.get(r["rcept_no"], {})
-        mcap_d0, mcap_d1 = calc_mcaps(all_prices, idx0, det)
+        calc_d0, calc_d1 = calc_mcaps(all_prices, idx0, det)
+        old_d0, old_d1 = existing_mcap.get((ticker, disc_date), (None, None))
+        # 저장값 우선, 비어 있는 필드만 새 계산으로 채움 (신규 이벤트의 d1은 다음날 확정)
+        mcap_d0 = old_d0 if old_d0 is not None else calc_d0
+        mcap_d1 = old_d1 if old_d1 is not None else calc_d1
         events.append({
             "ticker": ticker,
             "name": name,
