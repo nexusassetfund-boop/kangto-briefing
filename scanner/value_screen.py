@@ -104,6 +104,13 @@ def _market_fundamentals():
                     }
             except Exception as e:
                 logger.warning("시총 조회 실패(무시): %s", e)
+            # 장중·개장 전이면 당일 종가가 미정산(0/None)이라 시총·관문이 전부 깨진다.
+            # 유효 종가가 바닥이면 이 날짜를 버리고 직전 거래일로 백오프(look-ahead 아님).
+            valid_close = sum(1 for c in cap.values() if c.get("close"))
+            if valid_close < 100:
+                logger.warning("기준일 %s 유효 종가 %d — 미정산(장중·개장 전) 추정, 직전일로 백오프",
+                               d, valid_close)
+                continue
             logger.info("펀더멘털 %d종목 (기준일 %s)", len(fund), d)
             return fund, cap, d
         except Exception as e:
