@@ -37,7 +37,7 @@ OUT_PATH = ROOT / "docs" / "data" / "drawdown_bands.json"
 # ── 기준 (완화하려면 여기만 수정) ──
 OFF_HIGH_MAX = -25.0        # 52주 고점 대비 -25% 이하만
 MIN_CAP = 300_000_000_000   # 시총 3,000억 이상 (마이크로캡 배제 — value_screen과 동일)
-MAX_TICKERS = 100           # 일별 멀티플 조회 상한 (낙폭 깊은 순)
+MAX_TICKERS = 500           # 일별 멀티플 조회 상한 (안전장치 — 유니버스 전체가 걸려도 여유)
 BAND_DAYS = 372             # 밴드 룩백 (달력일 ≈ 1년)
 DERATE_PBR_PCT = 20.0       # 디레이팅 판정: PBR 1년 밴드 하위 20%
 EPS_DROP_MIN = -15.0        # 이익 훼손 판정: EPS 1년 변화 -15% 이하
