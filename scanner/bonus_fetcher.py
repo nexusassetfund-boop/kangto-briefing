@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """무상증자 이벤트드리븐 백테스터 데이터 수집 (넥서스 이벤트드리븐 > 무상증자 탭용)
 
-1. DART 공시검색(list.json, 주요사항보고서) → 2024-01-01 이후 '무상증자결정' 공시
+1. DART 공시검색(list.json, 주요사항보고서) → 2023-01-01 이후 '무상증자결정' 공시
    - 유무상증자·정정공시 제외 (원 공시의 접수일이 발표일)
 2. DART fricDecsn.json → 1주당 신주배정 주식수·신주배정기준일·신주상장예정일 보강
 3. pykrx(KRX 정보데이터시스템) → 수정주가 일봉 OHLC (실패 시 FinanceDataReader 폴백)
@@ -24,7 +24,7 @@ import requests
 
 socket.setdefaulttimeout(20)
 
-BGN_DATE = "2024-01-01"          # 백테스트 시작 — 이 날짜 이후 공시만
+BGN_DATE = "2023-01-01"          # 백테스트 시작 — 이 날짜 이후 공시만
 PRE_BARS = 5                     # 공시일 이전 컨텍스트 봉 수
 MAX_BARS_AFTER = 220             # 공시일(포함) 이후 최대 봉 수 (~10.5개월) — KV 용량 관리
 OUT = Path(__file__).resolve().parents[1] / "docs" / "data" / "bonus_backtest.json"
