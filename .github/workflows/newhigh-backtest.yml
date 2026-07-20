@@ -1,0 +1,30 @@
+name: 52주 신고가 스크리너 데이터
+# 이벤트드리븐 > 52주 신고가 탭용. marcap(KRX 원본 공개데이터) 주봉 52주 신고가 후보 이벤트.
+# 산출물은 repo에 커밋하지 않고 Worker KV(newhigh_backtest.json)로만 게시한다.
+on:
+  schedule:
+    - cron: "40 23 * * *"   # 매일 KST 08:40 — 전일 종가까지 반영 (ipo 08:00·bonus 08:20와 시차)
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency: { group: newhigh-backtest, cancel-in-progress: false }
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+      - name: 52주 신고가 데이터 수집 (marcap)
+        run: python scanner/newhigh_fetcher.py
+      - name: Worker KV 게시
+        env:
+          NEXUS_ADMIN_TOKEN: ${{ secrets.NEXUS_ADMIN_TOKEN }}
+        run: python scanner/post_newhigh_backtest.py
