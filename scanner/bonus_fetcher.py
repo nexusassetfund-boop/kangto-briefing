@@ -186,6 +186,26 @@ def calc_mcaps(all_prices: list[dict], idx0: int, det: dict) -> tuple[int | None
     return d0, d1
 
 
+def get_naver_shares(ticker: str) -> float | None:
+    """네이버 현재 상장주식수 역산 (시가총액[백만원] / 현재가).
+
+    신주 상장 전까지 주식수는 불변이므로 조회 시점(장중/장전)과 무관하게 정확.
+    권리락 전 이벤트의 매수일 시총을 '실주식수 × 매수일 종가'로 확정하는 데 쓴다.
+    """
+    try:
+        resp = requests.get(
+            f"https://api.finance.naver.com/service/itemSummary.naver?itemcode={ticker}",
+            headers={**HEADERS, "Referer": f"https://finance.naver.com/item/main.naver?code={ticker}"},
+            timeout=15)
+        d = resp.json()
+        ms, now = d.get("marketSum"), d.get("now")
+        if ms and now:
+            return ms * 1e6 / now
+    except Exception as e:
+        print(f"    네이버 시총 오류 {ticker}: {e}")
+    return None
+
+
 def get_prices_fdr(ticker: str, frm: str, to: str) -> list[dict] | None:
     try:
         import FinanceDataReader as fdr
@@ -229,6 +249,7 @@ def main():
     print(f"\n[3/3] 일봉·시가총액 수집 ({len(rows)}건)...")
     today = datetime.now().strftime("%Y-%m-%d")
     price_cache: dict[str, list[dict]] = {}  # ticker → 전체 구간 일봉 (동일종목 복수 이벤트 공유)
+    naver_shares_cache: dict[str, float | None] = {}  # ticker → 네이버 실주식수 (진행 중 이벤트용)
     events: list[dict] = []
 
     # 기존 KV 데이터에서 시가총액 보존 — 매수일 시총은 불변의 과거 사실이므로
@@ -279,11 +300,29 @@ def main():
         prices = all_prices[max(0, idx0 - PRE_BARS): idx0 + MAX_BARS_AFTER]
 
         det = details.get(r["rcept_no"], {})
-        calc_d0, calc_d1 = calc_mcaps(all_prices, idx0, det)
         old_d0, old_d1 = existing_mcap.get((ticker, disc_date), (None, None))
-        # 저장값 우선, 비어 있는 필드만 새 계산으로 채움 (신규 이벤트의 d1은 다음날 확정)
-        mcap_d0 = old_d0 if old_d0 is not None else calc_d0
-        mcap_d1 = old_d1 if old_d1 is not None else calc_d1
+
+        # 1순위: 권리락 전(진행 중) 이벤트는 네이버 실주식수 × 매수일 종가로 직접 확정.
+        #   저장값보다 우선해 잘못 저장된 값도 자가 치유. 권리락일(기준일 전영업일)
+        #   부근에는 일봉이 이미 수정됐을 수 있어 기준일 4일 전까지만 적용(보수적).
+        direct_d0 = direct_d1 = None
+        record = det.get("record_date")
+        if record:
+            safe_until = (datetime.strptime(record, "%Y-%m-%d") - timedelta(days=4)).strftime("%Y-%m-%d")
+            if all_prices[-1]["d"] < safe_until:
+                if ticker not in naver_shares_cache:
+                    naver_shares_cache[ticker] = get_naver_shares(ticker)
+                    time.sleep(0.1)
+                sh = naver_shares_cache[ticker]
+                if sh:
+                    direct_d0 = round(sh * all_prices[idx0]["c"] / 1e8)
+                    if idx0 + 1 < len(all_prices):
+                        direct_d1 = round(sh * all_prices[idx0 + 1]["c"] / 1e8)
+
+        # 2순위: 저장값(최초 확정 보존) / 3순위: 공시 주식수 × 수정주가 계산 (과거 백필)
+        calc_d0, calc_d1 = calc_mcaps(all_prices, idx0, det)
+        mcap_d0 = direct_d0 if direct_d0 is not None else (old_d0 if old_d0 is not None else calc_d0)
+        mcap_d1 = direct_d1 if direct_d1 is not None else (old_d1 if old_d1 is not None else calc_d1)
         events.append({
             "ticker": ticker,
             "name": name,
