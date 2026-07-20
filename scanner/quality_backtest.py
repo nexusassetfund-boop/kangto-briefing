@@ -1,16 +1,20 @@
 """
 퀄리티 성장주 발굴 전략 — 월간 리밸런싱 5개년 백테스트 (value_backtest 엔진 재사용).
 
-가설: 포인트인타임 재무로 계산한 '퀄리티 종합 Z' 상위 종목은 코스피200+코스닥150 유니버스에서
-      벤치마크(KODEX200) 대비 초과수익을 낸다. (밸류·성장은 관문, 정렬은 순수 퀄리티)
+가설: 퀄리티 게이트 통과 종목 중 퀄리티·모멘텀 합성 Z 상위는 코스피200+코스닥150에서 초과수익.
 
-전략 (제로 재량):
+검증 결과 (2026-07, 5개년 2021-08~2026-07, reports/backtest_quality.md):
+  quality(순수) 5.75% < qarp(퀄+성장) -0.04% < qgm 13.48% ≈ qm(퀄+모멘텀) 13.84% (Sharpe 0.58)
+  → 트레일링 성장은 노이즈(growth 단독 0.92%), 진짜 성장신호는 주가 모멘텀. 채택=qm.
+  peer 대비 우위(밸류 4.48·모멘텀 6.28·QVM 7.99), evaluate_backtest 75/100 Deploy.
+
+전략 (mode=qm, 제로 재량):
   유니버스: 각 신호일 시점 코스피200+코스닥150 (KRX 포인트인타임 덤프)
   관문: 시총>=3,000억, EPS·BPS 양수(적자·자본잠식 배제), PER<=40(극단 고평가만 컷),
         DART 연결재무 산출 가능(매출총이익·자산총계 존재 — 금융/지주 자연 배제)
-  퀄리티 Z (신호일 크로스섹션 표준화, winsorize 5/95, 부호 적용 후 가용 지표 평균):
-        +ROE(EPS/BPS) +GPA(매출총이익/자산총계) +영업이익률 −부채비율(부채/자본) −accruals((순이익−영업CF)/자산)
-  선정: 종합 Z 상위 20, 동일비중
+  퀄리티 Z: +ROE(EPS/BPS) +GPA(매출총이익/자산총계) +영업이익률 −부채비율 −accruals((순이익−영업CF)/자산)
+  모멘텀 Z: 12-1 모멘텀 (231거래일 룩백, 최근 21일 제외)
+  합성: composite = 0.5·퀄리티Z + 0.5·모멘텀Z (각 winsorize 5/95 표준화 후), 상위 20 동일비중
   리밸런싱/체결/비용: value_backtest와 동일 (전월말 신호 → 익월초 시가, ±0.5% 슬리피지 등)
 
 포인트인타임:
@@ -74,8 +78,10 @@ MODE_WEIGHTS = {
 
 
 def _base_params() -> dict:
+    # 기본 모드 qm — 5개년 백테스트로 검증된 전략(퀄리티 게이트 + 퀄리티Z·모멘텀Z 50:50).
+    # 대조군(quality/qarp/qm/qgm/growth)은 --mode 로 재현.
     return {"min_cap": MIN_CAP, "per_max": PER_MAX, "top": TOP_OUT,
-            "report_month": 5, "drop_component": None, "mode": "quality",
+            "report_month": 5, "drop_component": None, "mode": "qm",
             "mom_win": MOM_WIN, "mom_skip": MOM_SKIP}
 
 
@@ -350,7 +356,7 @@ def main():
     ap.add_argument("--end", default=None)
     ap.add_argument("--top", type=int, default=TOP_OUT)
     ap.add_argument("--per-max", type=float, default=PER_MAX)
-    ap.add_argument("--mode", choices=list(MODE_WEIGHTS), default="quality")
+    ap.add_argument("--mode", choices=list(MODE_WEIGHTS), default="qm")
     ap.add_argument("--report-month", type=int, default=5)
     ap.add_argument("--slip-mult", type=float, default=1.0)
     ap.add_argument("--full-rebalance", action="store_true")
