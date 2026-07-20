@@ -581,12 +581,43 @@ def _fetch_index_constituents_sync() -> list[tuple[str, str]]:
         logger.warning("pykrx·캐시 모두 실패 — FDR 시총 근사로 완주 (진짜 지수 구성 아님, 캐시 미갱신)")
         tickers, seen = _fetch_constituents_fdr_fallback()
 
+    # 종목명 보강 — name_map 실패 시 (code, code)로 남은 항목을 캐시·FDR 리스팅으로 해결
+    tickers = _backfill_names(tickers)
+
     # 진짜 지수 구성(pykrx)일 때만 캐시 저장 — FDR 근사가 last-known-good을 덮어쓰지 못하게
-    if from_pykrx:
+    # 종목명이 대부분 미해결이면 저장 생략 (코드-이름 오염 캐시가 last-known-good을 덮으면 안 됨)
+    unresolved = sum(1 for c, n in tickers if n == c)
+    if from_pykrx and unresolved <= len(tickers) // 10:
         _save_universe_cache(tickers)
+    elif from_pykrx:
+        logger.warning("종목명 미해결 %d/%d — 유니버스 캐시 저장 생략", unresolved, len(tickers))
 
     logger.info("지수 구성종목 총 %d개 (중복 제거, 소스=%s)", len(tickers), "pykrx" if from_pykrx else "fdr근사")
     return tickers
+
+
+def _backfill_names(tickers: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """(code, code)로 남은 미해결 종목명을 캐시(last-known-good) → FDR 리스팅 순으로 보강.
+    pykrx get_market_ticker_and_name이 통째로 실패해도 후보가 코드명으로 게시되지 않게 한다."""
+    unresolved = {c for c, n in tickers if n == c}
+    if not unresolved:
+        return tickers
+    fix_map = {c: n for c, n in _load_universe_cache() if n != c and c in unresolved}
+    if unresolved - set(fix_map):
+        try:
+            import FinanceDataReader as fdr
+            for market in ["KOSPI", "KOSDAQ"]:
+                df = fdr.StockListing(market)
+                for _, row in df.iterrows():
+                    code = str(row.get("Code", "")).strip()
+                    if code in unresolved and code not in fix_map:
+                        name = str(row.get("Name", "")).strip()
+                        if name and name != code:
+                            fix_map[code] = name
+        except Exception as e:
+            logger.warning("FDR 종목명 보강 실패: %s", e)
+    logger.info("종목명 보강: 미해결 %d개 중 %d개 해결", len(unresolved), len(fix_map))
+    return [(c, fix_map.get(c, n)) for c, n in tickers]
 
 
 def _fetch_constituents_fdr_fallback() -> tuple[list[tuple[str, str]], set]:
