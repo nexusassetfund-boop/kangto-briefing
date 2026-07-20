@@ -387,7 +387,15 @@ def main():
 
         prices = get_prices(ticker, ipo_date)
         if not prices:
-            print(" → 데이터 없음, 건너뜀")
+            # 일시적 FDR 실패로 오늘 시세를 못 받은 경우, 기존에 정상 수집돼 있던
+            # 종목이면 전체 레코드를 그대로 이월해 이력 소실을 막는다.
+            # (KV가 ipo_backtest.json의 유일 저장소 — 스킵하면 과거 가격까지 영구 소실)
+            prev = existing.get(ticker)
+            if prev and prev.get("prices"):
+                stocks.append({**prev, "stale": True})
+                print(" → 데이터 없음, 기존 레코드 이월(stale)")
+            else:
+                print(" → 데이터 없음, 건너뜀")
             continue
 
         listing_open = prices[0]["o"]
