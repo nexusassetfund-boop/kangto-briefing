@@ -167,16 +167,22 @@ def calc_mcaps(all_prices: list[dict], idx0: int, det: dict) -> tuple[int | None
     """발표일(d0)·다음 거래일(d1) 종가 기준 시가총액 (억원).
 
     KRX 일별 시총 API는 로그인(KRX_ID/PW)이 필요해 CI에서 못 쓴다. 대신
-    공시상 '증자 전 발행주식총수 + 신주 수' × 매수일 수정주가 종가로 계산한다.
-    수정주가는 권리락 배율(구주/(구주+신주))로 나눠져 있어, 증자 후 주식수를
-    곱하면 명목 시총과 정확히 일치한다 (이후 추가 감자·분할 시에만 오차).
+    공시상 발행주식총수 × 매수일 종가(수정주가)로 계산하되, 곱할 주식수는
+    이 무증의 권리락이 일봉에 반영됐는지에 따라 달라진다:
+    - 신주배정기준일 이후 봉 존재 → 매수일 가격이 권리락 배율(구주/(구주+신주))로
+      수정돼 있음 → '증자 후 주식수'를 곱해야 명목 시총과 일치
+    - 기준일 미도래(진행 중 이벤트) → 가격이 명목가 그대로 → '증자 전 주식수'
+    (권리락일 당일 하루는 근사 오차 가능 — 다음날 자동 갱신에서 정정.
+     이후 추가 감자·분할이 있으면 과거 이벤트에 오차 가능.)
     """
     base, new = det.get("base_shares"), det.get("new_shares")
     if not base or new is None:
         return None, None
-    shares_after = base + new
-    d0 = round(shares_after * all_prices[idx0]["c"] / 1e8) if idx0 < len(all_prices) else None
-    d1 = round(shares_after * all_prices[idx0 + 1]["c"] / 1e8) if idx0 + 1 < len(all_prices) else None
+    record = det.get("record_date")
+    adjusted = bool(record) and all_prices[-1]["d"] >= record
+    shares = base + new if adjusted else base
+    d0 = round(shares * all_prices[idx0]["c"] / 1e8) if idx0 < len(all_prices) else None
+    d1 = round(shares * all_prices[idx0 + 1]["c"] / 1e8) if idx0 + 1 < len(all_prices) else None
     return d0, d1
 
 
