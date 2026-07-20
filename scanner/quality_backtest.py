@@ -43,13 +43,13 @@ from backtest import CACHE_DIR
 import fetch_value
 from value_backtest import (
     build_calendar, fetch_universe_pit, fetch_snapshot, fiscal_year_for,
-    load_prices, load_bench, simulate, metrics, _grid_row,
+    load_prices, load_bench, simulate, metrics, _grid_row, _make_mom,
 )
 
 logger = logging.getLogger("quality_backtest")
 ROOT = Path(__file__).parent.parent
 
-FIN_CACHE_PATH = CACHE_DIR / "qbt_fin.json"
+FIN_CACHE_PATH = CACHE_DIR / "qbt_fin_v2.json"   # v2: 성장률(rev_g·op_g) 포함
 DART_SLEEP = 0.15
 _DART = "https://opendart.fss.or.kr/api"
 
@@ -59,11 +59,24 @@ PER_MAX = 40.0              # 극단 고평가만 컷 (정렬엔 미사용)
 TOP_OUT = 20
 # 퀄리티 Z 구성요소: (키, 부호). 부호 +는 높을수록 좋음, −는 낮을수록 좋음.
 Z_COMPONENTS = [("roe", +1), ("gpa", +1), ("opm", +1), ("debt", -1), ("accruals", -1)]
+GROWTH_COMPONENTS = [("rev_g", +1), ("op_g", +1)]   # 2년 매출·영업이익 CAGR
+MOM_WIN = 231   # 12-1 모멘텀 (라이브 value_screen과 동일)
+MOM_SKIP = 21
+
+# 모드별 최종 합성 = 각 블록 Z의 가중 평균 (블록 Z는 이미 표준화됨).
+MODE_WEIGHTS = {
+    "quality": {"q": 1.0},                       # 순수 퀄리티 (레시피 A)
+    "qarp":    {"q": 0.5, "g": 0.5},             # 퀄리티+성장 (레시피 B / QARP)
+    "qm":      {"q": 0.5, "m": 0.5},             # 퀄리티+모멘텀 (리서치 상보성)
+    "qgm":     {"q": 1/3, "g": 1/3, "m": 1/3},   # 퀄리티+성장+모멘텀
+    "growth":  {"g": 1.0},                        # 순수 성장 (대조군)
+}
 
 
 def _base_params() -> dict:
     return {"min_cap": MIN_CAP, "per_max": PER_MAX, "top": TOP_OUT,
-            "report_month": 5, "drop_component": None}
+            "report_month": 5, "drop_component": None, "mode": "quality",
+            "mom_win": MOM_WIN, "mom_skip": MOM_SKIP}
 
 
 # ── DART 포인트인타임 재무 (퀄리티 지표 원시항목) ─────────
@@ -90,37 +103,56 @@ def _quality_fin(corp: str, year: int) -> dict | None:
     if not rows:
         return None
 
-    def get(nm, sj):
+    def get(nm, sj, per="thstrm"):
+        """per: thstrm(당기)·frmtrm(전기)·bfefrmtrm(전전기) — 한 보고서에 3개년 수록."""
         nmz = nm.replace(" ", "")
         for x in rows:
             if x.get("sj_div") != sj:
                 continue
             a = (x.get("account_nm", "") or "").replace(" ", "")
             if a == nmz or a == nmz + "(손실)" or a.startswith(nmz):
-                return fetch_value._num(x.get("thstrm_amount"))
+                return fetch_value._num(x.get(per + "_amount"))
+        return None
+
+    def acct(nm, sjs, per="thstrm"):
+        for sj in sjs:
+            v = get(nm, sj, per)
+            if v is not None:
+                return v
         return None
 
     assets = get("자산총계", "BS")
     liab = get("부채총계", "BS")
     equity = get("자본총계", "BS")
-    rev = get("매출액", "CIS") or get("매출액", "IS")
-    gp = get("매출총이익", "CIS") or get("매출총이익", "IS")
-    op = get("영업이익", "CIS") or get("영업이익", "IS")
-    ni = get("당기순이익", "CIS") or get("당기순이익", "IS")
+    rev = acct("매출액", ("CIS", "IS"))
+    gp = acct("매출총이익", ("CIS", "IS"))
+    op = acct("영업이익", ("CIS", "IS"))
+    ni = acct("당기순이익", ("CIS", "IS"))
     cfo = get("영업활동 현금흐름", "CF") or get("영업활동으로 인한 현금흐름", "CF")
+    # 성장률용 과거 매출·영업이익 (동일 보고서 전기/전전기 — 포인트인타임, 추가호출 없음)
+    rev_p2 = acct("매출액", ("CIS", "IS"), "bfefrmtrm")
+    op_p2 = acct("영업이익", ("CIS", "IS"), "bfefrmtrm")
 
     def ratio(n, d):
         return (n / d) if (n is not None and d not in (None, 0)) else None
+
+    def cagr2(now, past):
+        # 2년 CAGR. 과거값 양수 필요(적자→흑자 왜곡 방지).
+        if now is None or past is None or past <= 0 or now <= 0:
+            return None
+        return (now / past) ** (1 / 2) - 1
 
     gpa = ratio(gp, assets)
     opm = ratio(op, rev)
     debt = ratio(liab, equity)
     accruals = ratio((ni - cfo) if (ni is not None and cfo is not None) else None, assets)
+    rev_g = cagr2(rev, rev_p2)
+    op_g = cagr2(op, op_p2)
     # 핵심 퀄리티(GPA·영업이익률) 둘 다 없으면 무효 (금융·지주 등 매출/매출총이익 미보고 자연 배제)
     if gpa is None and opm is None:
         return None
     return {"gpa": gpa, "opm": opm, "debt": debt, "accruals": accruals,
-            "assets": assets, "rev": rev}
+            "rev_g": rev_g, "op_g": op_g, "assets": assets, "rev": rev}
 
 
 class QualityStore:
@@ -165,23 +197,37 @@ def _winsor_z(values: list[float | None], sign: int) -> list[float | None]:
     return [sign * (v - mu) / sd if v is not None else None for v in clipped]
 
 
-def _score_cross_section(recs: list[dict], drop_component: str | None):
-    """recs 각 원소에 quality_z 부여. 가용 z 평균(모두 결측이면 제외 대상 표시 z=None)."""
-    comps = [(k, s) for k, s in Z_COMPONENTS if k != drop_component]
-    zmat = {}
-    for key, sign in comps:
-        zmat[key] = _winsor_z([r.get(key) for r in recs], sign)
-    for i, r in enumerate(recs):
+def _block_z(recs: list[dict], components, drop_component: str | None):
+    """구성요소 리스트 → 각 rec의 블록 Z(가용 요소 z 평균). 모두 결측이면 None."""
+    comps = [(k, s) for k, s in components if k != drop_component]
+    zmat = {key: _winsor_z([r.get(key) for r in recs], sign) for key, sign in comps}
+    out = []
+    for i in range(len(recs)):
         zs = [zmat[key][i] for key, _ in comps if zmat[key][i] is not None]
-        r["quality_z"] = round(float(np.mean(zs)), 4) if zs else None
-        r["z_detail"] = {key: (round(zmat[key][i], 3) if zmat[key][i] is not None else None)
-                         for key, _ in comps}
+        out.append(round(float(np.mean(zs)), 4) if zs else None)
+    return out
+
+
+def _score_cross_section(recs: list[dict], p: dict):
+    """recs 각 원소에 quality_z·growth_z·mom_z·composite 부여. composite=None이면 정렬 제외."""
+    qz = _block_z(recs, Z_COMPONENTS, p.get("drop_component"))
+    gz = _block_z(recs, GROWTH_COMPONENTS, None)
+    mz = _winsor_z([r.get("mom") for r in recs], +1)   # 모멘텀 단일지표 z
+    weights = MODE_WEIGHTS[p["mode"]]
+    for i, r in enumerate(recs):
+        r["quality_z"], r["growth_z"], r["mom_z"] = qz[i], gz[i], mz[i]
+        block = {"q": qz[i], "g": gz[i], "m": mz[i]}
+        num = den = 0.0
+        for bk, w in weights.items():
+            if block[bk] is not None:
+                num += w * block[bk]
+                den += w
+        r["composite"] = round(num / den, 4) if den > 0 else None
 
 
 # ── 스크린 ───────────────────────────────────────────────
-def screen_at(sig_date, universe, fund, cap, p, qstore: QualityStore):
-    """신호일 스냅샷 → (선정 리스트, 관문 통과 수)."""
-    fy = fiscal_year_for(sig_date, p["report_month"])
+def _gate(universe, fund, cap, p, qstore, fy):
+    """관문 통과 후보 원시지표 리스트 반환 (정렬·스코어 전)."""
     recs = []
     for code, name in universe:
         f = fund.get(code)
@@ -204,28 +250,58 @@ def screen_at(sig_date, universe, fund, cap, p, qstore: QualityStore):
             "code": code, "name": name, "per": round(per, 1),
             "roe": round(eps / bps * 100, 2),
             "gpa": fin["gpa"], "opm": fin["opm"], "debt": fin["debt"], "accruals": fin["accruals"],
+            "rev_g": fin.get("rev_g"), "op_g": fin.get("op_g"),
         })
+    return recs
+
+
+def screen_at(sig_date, universe, fund, cap, p, qstore: QualityStore, mom=None):
+    """신호일 스냅샷 → (선정 리스트, 관문 통과 수). mom(code)->float|None (모멘텀 모드용)."""
+    fy = fiscal_year_for(sig_date, p["report_month"])
+    recs = _gate(universe, fund, cap, p, qstore, fy)
     n_gate = len(recs)
-    _score_cross_section(recs, p.get("drop_component"))
-    ranked = sorted((r for r in recs if r["quality_z"] is not None),
-                    key=lambda r: r["quality_z"], reverse=True)
-    # 표시용 반올림 (Z 계산 후)
-    for r in ranked:
+    if mom is not None:
+        for r in recs:
+            r["mom"] = mom(r["code"])
+    _score_cross_section(recs, p)
+    ranked = sorted((r for r in recs if r["composite"] is not None),
+                    key=lambda r: r["composite"], reverse=True)
+    for r in ranked:  # 표시용 반올림 (Z 계산 후)
         r["gpa"] = round(r["gpa"] * 100, 2) if r["gpa"] is not None else None
         r["opm"] = round(r["opm"] * 100, 2) if r["opm"] is not None else None
         r["debt"] = round(r["debt"] * 100, 1) if r["debt"] is not None else None
         r["accruals"] = round(r["accruals"] * 100, 2) if r["accruals"] is not None else None
+        r["rev_g"] = round(r["rev_g"] * 100, 1) if r["rev_g"] is not None else None
+        r["op_g"] = round(r["op_g"] * 100, 1) if r["op_g"] is not None else None
     return ranked[:p["top"]], n_gate
 
 
-def run_screens(rebals, p, qstore: QualityStore):
+def _needs_mom(p) -> bool:
+    return "m" in MODE_WEIGHTS[p["mode"]]
+
+
+def collect_gate_codes(rebals, p, qstore) -> set[str]:
+    """모멘텀 모드 사전 단계 — 전 신호일 관문 통과 종목 합집합 (가격 다운로드 대상)."""
+    codes = set()
+    for sig, _ in rebals:
+        uni, _s = fetch_universe_pit(sig)
+        fund, cap, _d = fetch_snapshot(sig)
+        fy = fiscal_year_for(sig, p["report_month"])
+        for r in _gate(uni, fund, cap, p, qstore, fy):
+            codes.add(r["code"])
+        qstore.save()
+    return codes
+
+
+def run_screens(rebals, p, qstore: QualityStore, mom_closes=None):
     out = []
     for sig, ex in rebals:
         assert sig < ex, "신호일이 체결일보다 늦음"
         uni, src = fetch_universe_pit(sig)
         fund, cap, snap_d = fetch_snapshot(sig)
         assert snap_d <= sig.strftime("%Y%m%d"), "look-ahead: 스냅샷이 신호일 이후"
-        sel, n_gate = screen_at(sig, uni, fund, cap, p, qstore)
+        mom = _make_mom(mom_closes, sig, p) if mom_closes is not None else None
+        sel, n_gate = screen_at(sig, uni, fund, cap, p, qstore, mom)
         out.append({"sig": sig, "ex": ex, "selected": sel, "n_prelim": n_gate,
                     "uni_src": src, "top": p["top"]})
         qstore.save()
@@ -234,7 +310,15 @@ def run_screens(rebals, p, qstore: QualityStore):
 
 
 def run_one(days, rebals, p, qstore, start, end, bench, slip_mult=1.0, full_rebalance=False, label="base"):
-    screens = run_screens(rebals, p, qstore)
+    if _needs_mom(p):
+        gate_codes = collect_gate_codes(rebals, p, qstore)
+        mom_start = (pd.Timestamp(start) - pd.Timedelta(days=int((p["mom_win"] + p["mom_skip"]) * 1.6) + 30)
+                     ).strftime("%Y-%m-%d")
+        logger.info("[%s] 모멘텀 가격 로드: %d종목 (%s~)", label, len(gate_codes), mom_start)
+        _o, mom_closes, _m = load_prices(gate_codes, mom_start, end)
+        screens = run_screens(rebals, p, qstore, mom_closes=mom_closes)
+    else:
+        screens = run_screens(rebals, p, qstore)
     all_codes = {r["code"] for s in screens for r in s["selected"]}
     opens, closes, missing = load_prices(all_codes, start, end)
     nav, trades, aux = simulate(days, screens, opens, closes, p, slip_mult, full_rebalance)
@@ -266,6 +350,7 @@ def main():
     ap.add_argument("--end", default=None)
     ap.add_argument("--top", type=int, default=TOP_OUT)
     ap.add_argument("--per-max", type=float, default=PER_MAX)
+    ap.add_argument("--mode", choices=list(MODE_WEIGHTS), default="quality")
     ap.add_argument("--report-month", type=int, default=5)
     ap.add_argument("--slip-mult", type=float, default=1.0)
     ap.add_argument("--full-rebalance", action="store_true")
@@ -293,7 +378,8 @@ def main():
         return
 
     p = _base_params()
-    p.update({"top": args.top, "per_max": args.per_max, "report_month": args.report_month})
+    p.update({"top": args.top, "per_max": args.per_max, "report_month": args.report_month,
+              "mode": args.mode})
     bench = load_bench(args.start, end)
 
     m, screens, trades, nav = run_one(days, rebals, p, qstore, args.start, end, bench,
@@ -303,7 +389,8 @@ def main():
         "metrics": m,
         "screens": [{"sig": str(s["sig"].date()), "n_prelim": s["n_prelim"],
                      "selected": [{k: r.get(k) for k in
-                                   ("code", "name", "quality_z", "roe", "gpa", "opm", "debt", "accruals", "per")}
+                                   ("code", "name", "composite", "quality_z", "growth_z", "mom_z",
+                                    "roe", "gpa", "opm", "debt", "accruals", "rev_g", "op_g", "per")}
                                   for r in s["selected"]]} for s in screens],
         "trades": trades,
         "nav": {str(k.date()): round(float(v), 5) for k, v in nav.items()},
