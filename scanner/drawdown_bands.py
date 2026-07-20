@@ -39,7 +39,9 @@ OFF_HIGH_MAX = -25.0        # 52주 고점 대비 -25% 이하만
 MIN_CAP = 300_000_000_000   # 시총 3,000억 이상 (마이크로캡 배제 — value_screen과 동일)
 MAX_TICKERS = 500           # 일별 멀티플 조회 상한 (안전장치 — 유니버스 전체가 걸려도 여유)
 BAND_DAYS = 372             # 밴드 룩백 (달력일 ≈ 1년)
-DERATE_PBR_PCT = 20.0       # 디레이팅 판정: PBR 1년 밴드 하위 20%
+DERATE_PBR_PCT = 20.0       # 디레이팅 게이트: PBR 1년 밴드 하위 20% (자산가치 하한)
+DERATE_PER_PCT = 30.0       # 디레이팅 확인: PER 1년 밴드 하위 30% (이익 기준도 싸야 함)
+TRAP_PER_PCT = 50.0         # 함정: PBR 낮은데 PER 밴드 상위 → 이익이 가격보다 더 빠짐
 EPS_DROP_MIN = -15.0        # 이익 훼손 판정: EPS 1년 변화 -15% 이하
 PYKRX_SLEEP = 0.25          # KRX 조회 간격
 
@@ -92,9 +94,18 @@ def _verdict(rec: dict) -> str:
     # (적자 고PBR 테마주가 밴드 하위라는 이유만으로 디레이팅 상위에 오르는 것 방지)
     if eps is None and note != "흑자전환":
         return "neutral"
-    if rec.get("pbr_pct") is not None and rec["pbr_pct"] <= DERATE_PBR_PCT:
-        return "derating"
-    return "neutral"
+    # PBR 게이트: 자산가치 대비 밴드 하위여야 디레이팅 후보
+    if rec.get("pbr_pct") is None or rec["pbr_pct"] > DERATE_PBR_PCT:
+        return "neutral"
+    # PER로 확인/반증: 이익 기준으로도 싸야 진짜 디레이팅, PER 밴드 높으면 함정
+    per_pct = rec.get("per_pct")
+    if per_pct is None:
+        return "derating"          # PER 데이터 없음(표본 부족) → PBR 게이트만으로 판정
+    if per_pct > TRAP_PER_PCT:
+        return "earnings_driven"   # 자산은 싸 보여도 이익 기준 안 쌈 = 함정 (예: 삼성생명)
+    if per_pct <= DERATE_PER_PCT:
+        return "derating"          # PBR·PER 둘 다 하위 → 확인된 디레이팅
+    return "neutral"               # 중간대(30~50%) → 애매, 중립
 
 
 def build() -> dict | None:
@@ -187,7 +198,8 @@ def build() -> dict | None:
         "base_date": base_d,
         "criteria": {
             "off_high_max": OFF_HIGH_MAX, "min_cap_100m": MIN_CAP // 100_000_000,
-            "derate_pbr_pct": DERATE_PBR_PCT, "eps_drop_min": EPS_DROP_MIN,
+            "derate_pbr_pct": DERATE_PBR_PCT, "derate_per_pct": DERATE_PER_PCT,
+            "trap_per_pct": TRAP_PER_PCT, "eps_drop_min": EPS_DROP_MIN,
             "band_days": BAND_DAYS,
             "note": "판정은 백테스트 미검증 — 발굴 보조용. PBR 밴드=최근 1년 일별 분포 백분위.",
         },
