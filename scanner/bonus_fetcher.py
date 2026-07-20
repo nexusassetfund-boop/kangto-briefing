@@ -186,6 +186,22 @@ def calc_mcaps(all_prices: list[dict], idx0: int, det: dict) -> tuple[int | None
     return d0, d1
 
 
+def drop_glitch_bars(rows: list[dict], name: str) -> list[dict]:
+    """단일봉 스파이크 제거 — 전일 종가 대비 ±32% 초과 변동(가격제한폭 ±30% 위반 =
+    데이터 오류)인데 다음 봉이 전일 수준(±32% 이내)으로 복귀하는 봉을 버린다.
+    실제 기준가 변경(감자·병합 등)은 새 가격 수준이 유지되므로 걸리지 않는다.
+    (사례: 폰드그룹 2025-12-30 네이버 일봉 +79% 스파이크 후 즉시 복귀)"""
+    out = []
+    for i, p in enumerate(rows):
+        if 0 < i < len(rows) - 1:
+            prev_c, next_c = rows[i - 1]["c"], rows[i + 1]["c"]
+            if abs(p["c"] / prev_c - 1) > 0.32 and abs(next_c / prev_c - 1) < 0.32:
+                print(f"    스파이크 봉 제거 {name} {p['d']}: 종가 {p['c']:,} (전일 {prev_c:,})")
+                continue
+        out.append(p)
+    return out
+
+
 def get_naver_shares(ticker: str) -> float | None:
     """네이버 현재 상장주식수 역산 (시가총액[백만원] / 현재가).
 
@@ -285,7 +301,7 @@ def main():
             frm = (datetime.strptime(earliest[ticker], "%Y-%m-%d") - timedelta(days=14)).strftime("%Y-%m-%d")
             # FDR(네이버 일봉·KRX 정규장) 우선 — pykrx는 KRX 로그인 요구로 CI에서 실패함
             prices = get_prices_fdr(ticker, frm, today) or get_prices_krx(ticker, frm, today)
-            price_cache[ticker] = prices or []
+            price_cache[ticker] = drop_glitch_bars(prices, name) if prices else []
             time.sleep(0.3)
         all_prices = price_cache[ticker]
         if not all_prices:
