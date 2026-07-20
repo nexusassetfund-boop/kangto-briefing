@@ -119,6 +119,17 @@ def build() -> dict | None:
         if c is None or c < MIN_CAP:
             continue
         pool.append((code, r))
+    # 신형코드(0009K0 등) 신규상장 종목은 스캐너가 이름을 못 받아옴 — pykrx로 보완
+    for code, r in pool:
+        if not r.get("name") or r.get("name") == r.get("ticker"):
+            try:
+                from pykrx import stock as _pykrx
+                nm = _pykrx.get_market_ticker_name(code)
+                if isinstance(nm, str) and nm and nm != code:
+                    r["name"] = nm
+            except Exception:
+                pass
+
     pool.sort(key=lambda x: x[1].get("off_high") or 0)  # 낙폭 깊은 순
     dropped = max(0, len(pool) - MAX_TICKERS)
     if dropped:
