@@ -25,11 +25,6 @@ jobs:
           KRX_ID: ${{ secrets.KRX_ID }}
           KRX_PW: ${{ secrets.KRX_PW }}
         run: python scanner/value_screen.py
-      - name: 낙폭·밸류밴드 스크리닝
-        env:
-          KRX_ID: ${{ secrets.KRX_ID }}
-          KRX_PW: ${{ secrets.KRX_PW }}
-        run: python scanner/drawdown_bands.py || echo "낙폭·밸류밴드 실패 — 기존 파일 보존 (다음 주 재시도)"
       - name: 결과 커밋
         run: |
           test -f docs/data/value_screen.json || { echo "출력 없음 — 커밋 생략"; exit 0; }
