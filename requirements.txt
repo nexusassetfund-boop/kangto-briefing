@@ -1,6 +1,7 @@
 httpx>=0.27
 numpy>=1.26
 pandas>=2.2
+pyarrow>=15      # newhigh-backtest.yml (marcap parquet) 용
 pykrx>=1.0.45
 finance-datareader>=0.9.90
 # ipo-backtest.yml (ipo_fetcher.py) 용
