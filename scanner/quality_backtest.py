@@ -53,7 +53,7 @@ from value_backtest import (
 logger = logging.getLogger("quality_backtest")
 ROOT = Path(__file__).parent.parent
 
-FIN_CACHE_PATH = CACHE_DIR / "qbt_fin_v2.json"   # v2: 성장률(rev_g·op_g) 포함
+FIN_CACHE_PATH = CACHE_DIR / "qbt_fin_v3.json"   # v3: 3개년 안정성 σ(roe_sigma·opm_sigma) 포함
 DART_SLEEP = 0.15
 _DART = "https://opendart.fss.or.kr/api"
 
@@ -64,6 +64,8 @@ TOP_OUT = 20
 # 퀄리티 Z 구성요소: (키, 부호). 부호 +는 높을수록 좋음, −는 낮을수록 좋음.
 Z_COMPONENTS = [("roe", +1), ("gpa", +1), ("opm", +1), ("debt", -1), ("accruals", -1)]
 GROWTH_COMPONENTS = [("rev_g", +1), ("op_g", +1)]   # 2년 매출·영업이익 CAGR
+# 안정성 σ (같은 보고서 3개년 — 포인트인타임, 추가 호출 없음). 낮을수록 좋음.
+STAB_COMPONENTS = [("roe_sigma", -1), ("opm_sigma", -1)]
 MOM_WIN = 231   # 12-1 모멘텀 (라이브 value_screen과 동일)
 MOM_SKIP = 21
 
@@ -74,6 +76,8 @@ MODE_WEIGHTS = {
     "qm":      {"q": 0.5, "m": 0.5},             # 퀄리티+모멘텀 (리서치 상보성)
     "qgm":     {"q": 1/3, "g": 1/3, "m": 1/3},   # 퀄리티+성장+모멘텀
     "growth":  {"g": 1.0},                        # 순수 성장 (대조군)
+    "qms":     {"q": 0.4, "m": 0.4, "s": 0.2},   # 퀄리티+모멘텀+안정성(별도 블록)
+    "qmsig":   {"q": 0.5, "m": 0.5},             # MSCI식 — 퀄리티 Z에 −ROEσ 6번째 구성요소
 }
 
 
@@ -138,6 +142,14 @@ def _quality_fin(corp: str, year: int) -> dict | None:
     # 성장률용 과거 매출·영업이익 (동일 보고서 전기/전전기 — 포인트인타임, 추가호출 없음)
     rev_p2 = acct("매출액", ("CIS", "IS"), "bfefrmtrm")
     op_p2 = acct("영업이익", ("CIS", "IS"), "bfefrmtrm")
+    # 안정성 σ용 3개년 시계열 (동일 보고서 당기/전기/전전기 — 포인트인타임)
+    pers = ("thstrm", "frmtrm", "bfefrmtrm")
+    ni_s = [acct("당기순이익", ("CIS", "IS"), per) for per in pers]
+    eq_s = [get("자본총계", "BS", per) for per in pers]
+    rev_s = [acct("매출액", ("CIS", "IS"), per) for per in pers]
+    op_s = [acct("영업이익", ("CIS", "IS"), per) for per in pers]
+    roes = [n / e * 100 for n, e in zip(ni_s, eq_s) if n is not None and e not in (None, 0)]
+    opms = [o / v * 100 for o, v in zip(op_s, rev_s) if o is not None and v not in (None, 0)]
 
     def ratio(n, d):
         return (n / d) if (n is not None and d not in (None, 0)) else None
@@ -158,7 +170,9 @@ def _quality_fin(corp: str, year: int) -> dict | None:
     if gpa is None and opm is None:
         return None
     return {"gpa": gpa, "opm": opm, "debt": debt, "accruals": accruals,
-            "rev_g": rev_g, "op_g": op_g, "assets": assets, "rev": rev}
+            "rev_g": rev_g, "op_g": op_g, "assets": assets, "rev": rev,
+            "roe_sigma": round(float(np.std(roes)), 3) if len(roes) >= 3 else None,
+            "opm_sigma": round(float(np.std(opms)), 3) if len(opms) >= 3 else None}
 
 
 class QualityStore:
@@ -216,13 +230,15 @@ def _block_z(recs: list[dict], components, drop_component: str | None):
 
 def _score_cross_section(recs: list[dict], p: dict):
     """recs 각 원소에 quality_z·growth_z·mom_z·composite 부여. composite=None이면 정렬 제외."""
-    qz = _block_z(recs, Z_COMPONENTS, p.get("drop_component"))
+    q_comps = Z_COMPONENTS + ([("roe_sigma", -1)] if p["mode"] == "qmsig" else [])
+    qz = _block_z(recs, q_comps, p.get("drop_component"))
     gz = _block_z(recs, GROWTH_COMPONENTS, None)
+    sz = _block_z(recs, STAB_COMPONENTS, None)
     mz = _winsor_z([r.get("mom") for r in recs], +1)   # 모멘텀 단일지표 z
     weights = MODE_WEIGHTS[p["mode"]]
     for i, r in enumerate(recs):
         r["quality_z"], r["growth_z"], r["mom_z"] = qz[i], gz[i], mz[i]
-        block = {"q": qz[i], "g": gz[i], "m": mz[i]}
+        block = {"q": qz[i], "g": gz[i], "m": mz[i], "s": sz[i]}
         num = den = 0.0
         for bk, w in weights.items():
             if block[bk] is not None:
@@ -257,6 +273,7 @@ def _gate(universe, fund, cap, p, qstore, fy):
             "roe": round(eps / bps * 100, 2),
             "gpa": fin["gpa"], "opm": fin["opm"], "debt": fin["debt"], "accruals": fin["accruals"],
             "rev_g": fin.get("rev_g"), "op_g": fin.get("op_g"),
+            "roe_sigma": fin.get("roe_sigma"), "opm_sigma": fin.get("opm_sigma"),
         })
     return recs
 
