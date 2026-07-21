@@ -110,6 +110,57 @@ def _attach_bands(survivors):
     logger.info("밴드 조인 %d/%d종목", joined, len(survivors))
 
 
+def _stability(corp):
+    """5개년 안정성 지표 (MSCI 이익변동성·GMO 마진안정성·QMJ payout 근거, 표시·필터용 — 선정 미사용).
+    fnlttSinglAcnt 2회 호출(각 3개 연도 반환)로 최대 5개년 시계열 구성.
+      roe_sigma: 연도별 ROE(순이익/자본총계) 표준편차 (pp) — 이익 변동성
+      opm_sigma: 연도별 영업이익률 표준편차 (pp) — 마진 안정성(해자 지속성 프록시)
+      dilution : 자본금 기간 변화율 (%) — 희석 프록시 (F-Score noNewShares와 동일 계열)
+      stab_years: 시계열 연도 수 (3 미만이면 σ 미산출)
+    """
+    import urllib.request
+    yr = dt.datetime.now(tz=KST).year - 1
+    by_year = {}   # year -> {rev, op, ni, eq, cap}
+    ACCTS = {"매출액": "rev", "영업이익": "op", "당기순이익": "ni", "자본총계": "eq", "자본금": "cap"}
+    for y in (yr, yr - 2):
+        url = (f"{fetch_value._DART}/fnlttSinglAcnt.json?crtfc_key={fetch_value.DART_KEY}"
+               f"&corp_code={corp}&bsns_year={y}&reprt_code=11011")
+        try:
+            with urllib.request.urlopen(url, timeout=30) as r:
+                d = json.loads(r.read().decode())
+        except Exception:
+            continue
+        rows = d.get("list") or []
+        fs = "CFS" if any(x.get("fs_div") == "CFS" for x in rows) else "OFS"
+        for x in rows:
+            if x.get("fs_div") != fs:
+                continue
+            nm = (x.get("account_nm") or "").replace(" ", "").removesuffix("(손실)")
+            key = ACCTS.get(nm)
+            if not key:
+                continue
+            for per, off in (("thstrm", 0), ("frmtrm", 1), ("bfefrmtrm", 2)):
+                v = fetch_value._num(x.get(f"{per}_amount"))
+                if v is not None:
+                    by_year.setdefault(y - off, {}).setdefault(key, v)
+    def series(num, den):
+        out = []
+        for y in sorted(by_year):
+            d_ = by_year[y]
+            n, dv = d_.get(num), d_.get(den)
+            if n is not None and dv not in (None, 0):
+                out.append(n / dv * 100)
+        return out
+    roes, opms = series("ni", "eq"), series("op", "rev")
+    caps = [by_year[y]["cap"] for y in sorted(by_year) if by_year[y].get("cap")]
+    return {
+        "roe_sigma": round(float(np.std(roes)), 2) if len(roes) >= 3 else None,
+        "opm_sigma": round(float(np.std(opms)), 2) if len(opms) >= 3 else None,
+        "dilution": round((caps[-1] / caps[0] - 1) * 100, 1) if len(caps) >= 2 and caps[0] > 0 else None,
+        "stab_years": len(by_year),
+    }
+
+
 def _update_history(survivors, prev_state, today):
     """편입/제외 이력 누적 (append-only). 반환: 최근 26회 이력."""
     try:
@@ -248,7 +299,21 @@ async def build() -> dict | None:
         rec["stale"] = weeks >= STALE_WEEKS
     new_state = {rec["code"]: rec["first_seen"] for rec in survivors}
 
-    # 6차: 밴드 지표 조인(타이밍 렌즈) + 편입/제외 이력 누적
+    # 6차: 안정성 지표 (최종 편입 종목만 — 종목당 DART 2콜, 표시·필터용)
+    stab_sem = asyncio.Semaphore(6)
+
+    async def _stab(rec):
+        corp = corp_map.get(rec["code"])
+        if corp:
+            async with stab_sem:
+                rec.update(await asyncio.to_thread(_stability, corp))
+        return rec
+
+    await asyncio.gather(*(_stab(r) for r in survivors))
+    logger.info("안정성 지표 산출 %d/%d종목",
+                sum(1 for r in survivors if r.get("roe_sigma") is not None), len(survivors))
+
+    # 7차: 밴드 지표 조인(타이밍 렌즈) + 편입/제외 이력 누적
     _attach_bands(survivors)
     history = _update_history(survivors, state, today)
 
@@ -262,6 +327,7 @@ async def build() -> dict | None:
             "sort": "composite = 0.5·퀄리티Z + 0.5·모멘텀Z(12-1)",
             "backtest": "5개년 CAGR 13.84%·Sharpe 0.58·Deploy 75/100 (reports/backtest_quality.md)",
             "note": "트레일링 성장률은 노이즈로 확인 → 성장 신호는 주가 모멘텀이 대변",
+            "stability": "안정성(ROE σ·마진 σ·희석)은 표시·필터용 — 선정(composite)에는 미사용 (백테스트 재검증 전)",
         },
         "scanned": len(constituents),
         "passed_gate": len(prelim),
