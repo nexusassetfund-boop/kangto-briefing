@@ -38,6 +38,8 @@ KST = ZoneInfo("Asia/Seoul")
 ROOT = Path(__file__).parent.parent
 OUT_PATH = ROOT / "docs" / "data" / "quality_growth.json"
 STATE_PATH = ROOT / "docs" / "data" / "quality_growth_state.json"
+BANDS_PATH = ROOT / "docs" / "data" / "drawdown_bands.json"
+HISTORY_PATH = ROOT / "docs" / "data" / "quality_growth_history.json"
 
 # ── 스크리닝 기준 (백테스트 검증 파라미터) ──
 MIN_CAP = 300_000_000_000   # 시총 3,000억↑ (마이크로캡 배제)
@@ -83,6 +85,54 @@ def _composite(recs):
                 num += w * z
                 den += w
         r["composite"] = round(num / den, 3) if den > 0 else None
+
+
+# drawdown_bands.json에서 이관하는 가격대(밴드) 지표 — 타이밍 렌즈, 정렬·선정엔 미사용
+BAND_FIELDS = ("off_high", "per_pct", "pbr_pct", "pbr_lo", "pbr_hi",
+               "rise_from_low", "above_ma20", "stabilized", "verdict",
+               "low52", "high52", "sector")
+
+
+def _attach_bands(survivors):
+    """drawdown_bands.json 조인 — 밴드 풀 밖 종목은 필드 없음(프론트 graceful 처리)."""
+    try:
+        bands = json.loads(BANDS_PATH.read_text(encoding="utf-8"))
+        by_code = {c["code"]: c for c in bands.get("candidates", [])}
+    except Exception:
+        logger.warning("drawdown_bands.json 없음/파싱 실패 — 밴드 조인 생략")
+        return
+    joined = 0
+    for rec in survivors:
+        b = by_code.get(rec["code"])
+        if b:
+            rec["band"] = {k: b.get(k) for k in BAND_FIELDS}
+            joined += 1
+    logger.info("밴드 조인 %d/%d종목", joined, len(survivors))
+
+
+def _update_history(survivors, prev_state, today):
+    """편입/제외 이력 누적 (append-only). 반환: 최근 26회 이력."""
+    try:
+        history = json.loads(HISTORY_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        history = []
+    prev_codes = set(prev_state)
+    if not prev_codes:                      # 최초 실행 — diff 없음
+        return history[-26:]
+    try:
+        prev_names = {c["code"]: c["name"]
+                      for c in json.loads(OUT_PATH.read_text(encoding="utf-8"))["candidates"]}
+    except Exception:
+        prev_names = {}
+    cur = {r["code"]: r["name"] for r in survivors}
+    added = [{"code": c, "name": n} for c, n in cur.items() if c not in prev_codes]
+    removed = [{"code": c, "name": prev_names.get(c, c)}
+               for c in sorted(prev_codes - set(cur))]
+    if added or removed:
+        history.append({"date": today, "added": added, "removed": removed})
+        HISTORY_PATH.write_text(json.dumps(history, ensure_ascii=False, indent=2),
+                                encoding="utf-8")
+    return history[-26:]
 
 
 async def build() -> dict | None:
@@ -198,6 +248,10 @@ async def build() -> dict | None:
         rec["stale"] = weeks >= STALE_WEEKS
     new_state = {rec["code"]: rec["first_seen"] for rec in survivors}
 
+    # 6차: 밴드 지표 조인(타이밍 렌즈) + 편입/제외 이력 누적
+    _attach_bands(survivors)
+    history = _update_history(survivors, state, today)
+
     return {
         "updated": dt.datetime.now(tz=KST).isoformat(timespec="seconds"),
         "base_date": base_date,
@@ -213,6 +267,7 @@ async def build() -> dict | None:
         "passed_gate": len(prelim),
         "fin_ok": len(fetched),
         "candidates": survivors,
+        "history": history,
         "_state": new_state,
     }
 
