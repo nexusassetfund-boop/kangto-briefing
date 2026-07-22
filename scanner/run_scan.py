@@ -714,19 +714,25 @@ def _fnum(x, allow_zero: bool = False):
     return v
 
 
+def _fade_factor(T: int, ke: float) -> float:
+    """잔여이익 fade 현가계수 — 초과수익이 T년에 걸쳐 선형 소멸한다고 가정한 PV 합."""
+    r = ke / 100.0
+    return sum((1 - (t - 1) / T) / (1 + r) ** t for t in range(1, T + 1))
+
+
 def _calc_fair_value(eps, bps, roe_pct, ke: float = 9.0, roe_cap: float = 25.0):
-    """자체 적정가 — RIM(잔여이익 영구환원)과 Graham Number 중 보수적(낮은) 값.
-    RIM은 경기순환 이익 과대평가를 막기 위해 ROE를 roe_cap%로 상한.
-    반환: (fair, rim, graham) — 계산 불가 항목은 None."""
-    rim = graham = None
-    if bps and roe_pct and roe_pct > 0:
-        rim = round(bps * (1 + (min(roe_pct, roe_cap) - ke) / ke))
-        if rim <= 0:
-            rim = None
-    if eps and bps and eps > 0:
-        graham = round((22.5 * eps * bps) ** 0.5)
-    cands = [v for v in (rim, graham) if v]
-    return (min(cands) if cands else None), rim, graham
+    """자체 적정가 — 잔여이익 fade RIM (기본 10년 · 보수 5년 소멸).
+    구식 영구환원 RIM은 "현 ROE 영구지속" 가정으로 과대평가, Graham Number(√22.5·EPS·BPS)는
+    금융·지주 체계적 과대 편향 → 2026-07 폐지. 초과 ROE는 경쟁으로 소멸(fade)한다고 본다.
+    반환: (fair, rim_base, rim_cons) — fair는 보수값(rim_cons). 계산 불가 시 None."""
+    if not (bps and roe_pct and roe_pct > 0):
+        return None, None, None
+    excess = (min(roe_pct, roe_cap) - ke) / 100.0
+    base = round(bps * (1 + excess * _fade_factor(10, ke)))
+    cons = round(bps * (1 + excess * _fade_factor(5, ke)))
+    base = base if base > 0 else None
+    cons = cons if cons > 0 else None
+    return (cons or base), base, cons
 
 
 async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
@@ -850,9 +856,9 @@ async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
         pullback = {"trend": trend, "zone": zone, "ready": bool(zone)}
         target = m["target"]
         upside = round((target / price - 1) * 100, 1) if (target and price) else None
-        # 안전마진 — 수동 적정가 우선, 없으면 자체 적정가(RIM·Graham 보수값)로 계산
+        # 안전마진 — 수동 적정가 우선, 없으면 자체 적정가(fade RIM 보수값)로 계산
         roe = roe_map.get(code) or (round(eps / bps * 100, 1) if (eps and bps) else None)
-        fair_calc, fair_rim, fair_graham = _calc_fair_value(eps, bps, roe)
+        fair_calc, fair_rim, fair_rim_cons = _calc_fair_value(eps, bps, roe)
         fair = m["fair"] or fair_calc
         fair_src = "manual" if m["fair"] else ("calc" if fair else None)
         margin = round((fair - price) / fair * 100, 1) if (fair and price) else None
@@ -872,7 +878,7 @@ async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
         items[code] = {
             "price": round(price), "change_pct": change_pct, "per": per_str, "mktcap": mktcap_str,
             "pbr": pbr_v, "div": div_v, "eps": eps, "bps": bps, "roe": roe,
-            "fair": fair, "fair_src": fair_src, "fair_rim": fair_rim, "fair_graham": fair_graham,
+            "fair": fair, "fair_src": fair_src, "fair_rim": fair_rim, "fair_rim_cons": fair_rim_cons,
             "high52": round(high52), "low52": round(low52),
             "upside": upside, "margin": margin, "near_low": near_low, "watch": watch,
             "ma20": ma20, "ma60": ma60, "gap20": gap20, "gap60": gap60,

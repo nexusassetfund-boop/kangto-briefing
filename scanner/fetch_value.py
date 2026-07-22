@@ -187,6 +187,34 @@ def _financials(corp: str) -> dict:
     return result
 
 
+def _roe_series(corp: str) -> list[float]:
+    """연도별 ROE(%) 오름차순 리스트 — 정상화 ROE(최근 3개년 평균)용. _acnt 캐시 재사용."""
+    if not corp or not DART_KEY:
+        return []
+    this_year = dt.datetime.now(tz=KST).year
+    merged: dict = {}
+    for base in (this_year - 1, this_year - 4):
+        for nm, yv in _acnt(corp, base).items():
+            merged.setdefault(nm, {}).update(yv)
+
+    def series(names):
+        vals = {}
+        for nm in names:
+            if nm in merged:
+                for y, v in merged[nm].items():
+                    if v is not None and y not in vals:
+                        vals[y] = v
+        return vals
+
+    ni = series(["당기순이익", "당기순이익(손실)"])
+    eq = series(["자본총계"])
+    out = []
+    for y in sorted(eq):
+        if ni.get(y) is not None and eq.get(y):
+            out.append(round(ni[y] / eq[y] * 100, 1))
+    return out
+
+
 def _quality_score(m: dict) -> int | None:
     """간이 퀄리티 스코어 0~100 (ROE·마진·건전성·성장)."""
     if not m:
