@@ -31,6 +31,8 @@ from zoneinfo import ZoneInfo
 
 from data_provider import fetch_index_constituents, fetch_ohlcv, fetch_fundamental_kis, load_config
 from run_scan import _calc_fair_value, _fnum
+import time
+import consensus
 import fetch_value
 
 logger = logging.getLogger("value_screen")
@@ -304,6 +306,14 @@ async def build() -> dict | None:
         elif roe_norm is not None:
             rec["roe_norm"] = roe_norm
         rec["conf"] = _fair_conf(rec, roe_norm)
+        # 증권사 컨센서스 포워드 EPS/PER — 참고 전용(선정·정렬 미사용), 미제공 시 필드 생략
+        cns = consensus.fetch_consensus(rec["code"])
+        if cns.get("fwd_eps"):
+            rec["fwd_eps"] = cns["fwd_eps"]
+            rec["fwd_year"] = cns.get("fwd_year")
+            if rec.get("price") and cns["fwd_eps"] > 0:
+                rec["fwd_per"] = round(rec["price"] / cns["fwd_eps"], 1)
+        time.sleep(0.4)   # WISEreport 요청 예의 지연 (후보 20종목 → 총 ~8초)
 
     # 5차: 신규/장기잔류 배지 (first_seen 추적 — 이탈 후 재진입은 신규 취급)
     today = dt.datetime.now(tz=KST).date().isoformat()
