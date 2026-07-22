@@ -54,6 +54,29 @@ STALE_WEEKS = 39            # 장기잔류 기준 (약 9개월 — 백테스트:
 STATE_PATH = ROOT / "docs" / "data" / "value_screen_state.json"
 
 
+
+_FIN_KEYWORDS = ("금융", "지주", "홀딩스", "은행", "증권", "보험", "생명", "화재", "캐피탈", "카드")
+
+
+def _fair_conf(rec: dict, roe_norm) -> str:
+    """적정가 신뢰등급 A/B/C — 모델 가정 위반 신호마다 강등.
+    금융·지주(회계 BPS 특성상 RIM 과대)는 즉시 C."""
+    grade = 0  # 0=A, 1=B, 2+=C
+    name = rec.get("name") or ""
+    if any(k in name for k in _FIN_KEYWORDS):
+        grade = 2
+    if rec.get("roe") is not None and rec["roe"] > 25:
+        grade += 1                      # ROE 캡 발동 — 피크 이익 의심
+    if roe_norm is not None and rec.get("roe") is not None and abs(rec["roe"] - roe_norm) > 10:
+        grade += 1                      # 단년 ROE가 정상화와 크게 괴리 — 일회성 의심
+    if (rec.get("margin") or 0) > 60:
+        grade += 1                      # 극단 괴리 — 모델 오류 가능성이 저평가보다 높음
+    fs = (rec.get("f_score") or {}).get("score")
+    if fs is not None and fs <= 4:
+        grade += 1
+    return "ABC"[min(grade, 2)]
+
+
 def _market_fundamentals():
     """전 종목 펀더멘털·시총 (pykrx, 최근 영업일). 반환: (fund_map, cap_map, 기준일) 실패 시 ({}, {}, None)."""
     try:
@@ -227,7 +250,7 @@ async def build() -> dict | None:
         if per > PER_MAX or pbr > PBR_MAX:
             continue
         roe = round(eps / bps * 100, 1)
-        fair, fair_rim, fair_graham = _calc_fair_value(eps, bps, roe)
+        fair, fair_rim, fair_rim_cons = _calc_fair_value(eps, bps, roe)
         if not fair:
             continue
         margin = round((fair - price) / fair * 100, 1)
@@ -237,7 +260,7 @@ async def build() -> dict | None:
             "code": code, "name": name, "price": round(price),
             "mktcap": f"{round(c['cap'] / 1e8):,}억",
             "per": round(per, 1), "pbr": round(pbr, 2), "div": div, "eps": eps, "bps": bps, "roe": roe,
-            "fair": fair, "fair_rim": fair_rim, "fair_graham": fair_graham, "margin": margin,
+            "fair": fair, "fair_rim": fair_rim, "fair_rim_cons": fair_rim_cons, "margin": margin,
         })
     prelim.sort(key=lambda x: x["margin"], reverse=True)
     logger.info("밸류 필터 통과 %d종목 (스캔 %d)", len(prelim), len(constituents))
@@ -266,6 +289,21 @@ async def build() -> dict | None:
     for rec in survivors:
         corp = corp_map.get(rec["code"]) if dart_ok else None
         rec["f_score"] = fetch_value._fscore(corp) if corp else None
+        # 정상화 ROE(최근 3개년 평균)로 적정가·안전마진 재계산 — 단년 일회성 이익 왜곡 보정
+        roe_norm = None
+        if corp:
+            series = fetch_value._roe_series(corp)
+            if len(series) >= 2:
+                roe_norm = round(sum(series[-3:]) / len(series[-3:]), 1)
+        if roe_norm is not None and roe_norm > 0 and rec.get("bps"):
+            fair2, rim2, cons2 = _calc_fair_value(rec.get("eps"), rec["bps"], roe_norm)
+            if fair2 and rec.get("price"):
+                rec["roe_norm"] = roe_norm
+                rec["fair"], rec["fair_rim"], rec["fair_rim_cons"] = fair2, rim2, cons2
+                rec["margin"] = round((fair2 - rec["price"]) / fair2 * 100, 1)
+        elif roe_norm is not None:
+            rec["roe_norm"] = roe_norm
+        rec["conf"] = _fair_conf(rec, roe_norm)
 
     # 5차: 신규/장기잔류 배지 (first_seen 추적 — 이탈 후 재진입은 신규 취급)
     today = dt.datetime.now(tz=KST).date().isoformat()
@@ -291,7 +329,7 @@ async def build() -> dict | None:
             "margin_min": MARGIN_MIN,
             "sort": "12-1 모멘텀 내림차순 (밸류는 관문, 순서는 추세)",
             "fscore_note": f"F-Score는 참고 표시 전용 ({FSCORE_MIN}점 미만 주의) — 컷·정렬 미사용",
-            "fair_note": "적정가 = RIM(Ke 9%·ROE 상한 25%)·Graham 중 보수값",
+            "fair_note": "적정가 = fade RIM(초과ROE 10년/보수 5년 소멸·Ke 9%·ROE 상한 25%) — 정상화 ROE(3개년 평균) 기준·Graham 폐지",
         },
         "scanned": len(constituents),
         "passed_value": len(prelim),
