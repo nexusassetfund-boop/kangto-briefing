@@ -12,6 +12,7 @@ import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -33,12 +34,23 @@ def yahoo_quote(sym):
         headers={"user-agent": "Mozilla/5.0"}, timeout=15)
     res = r.json()["chart"]["result"][0]
     last = res["meta"].get("regularMarketPrice")
-    closes = [c for c in res["indicators"]["quote"][0]["close"] if c is not None]
+    bars = [(t, c) for t, c in zip(res.get("timestamp") or [], res["indicators"]["quote"][0]["close"])
+            if c is not None]
+    closes = [c for _, c in bars]
     prev = closes[-2] if len(closes) >= 2 else res["meta"].get("chartPreviousClose")
     if last is None or not prev:
         return None
-    return {"value": round(last, 2), "change": round(last - prev, 2),
-            "change_pct": round((last / prev - 1) * 100, 2)}
+    out = {"value": round(last, 2), "change": round(last - prev, 2),
+           "change_pct": round((last / prev - 1) * 100, 2)}
+    # 이 값이 어느 세션의 것인지 거래소 현지 날짜로 못박는다 — 브리핑이 "밤사이"를 하루 전 세션으로
+    # 잘못 잡아 이틀 전 종목 등락률을 끌어오는 사고(2026-07-23 pm: 7/21 마이크론 +12.17%)를 막는 앵커.
+    if bars:
+        try:
+            tz = ZoneInfo(res["meta"].get("exchangeTimezoneName") or "America/New_York")
+            out["session_date"] = datetime.fromtimestamp(bars[-1][0], tz).strftime("%Y-%m-%d")
+        except Exception:
+            pass
+    return out
 
 
 def collect_world():
@@ -210,11 +222,14 @@ def main():
         OUT.write_text(json.dumps({"skip": True, "reason": "휴장일"}, ensure_ascii=False), "utf-8")
         sys.exit(0)
 
+    world = collect_world()
     data = {
         "mode": mode,
         "generated_at": now.isoformat(),
         "date": today_str,
-        "world": collect_world(),
+        # world의 미국 자산이 어느 정규장 세션 종가인지 — am/pm 모두 "밤사이"의 정의는 이 날짜다
+        "us_session_date": (world.get("S&P500") or {}).get("session_date"),
+        "world": world,
         "kr_index": collect_kr_index(today_str),  # KOSPI/KOSDAQ 공식 일별 시세 (네이버 — 이 값을 우선 사용)
         "detector": collect_detector(),
         "prev_briefings": collect_prev_briefings(mode, today_str),
