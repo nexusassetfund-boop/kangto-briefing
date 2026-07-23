@@ -1,15 +1,15 @@
 {
- "updated": "2026-07-22T21:50:45+09:00",
+ "updated": "2026-07-23T15:37:02+09:00",
  "kospi": {
-  "price": 6797.7,
-  "ma200": 5632.76,
-  "ma50": 7936.38,
+  "price": 7040.91,
+  "ma200": 5650.53,
+  "ma50": 7920.76,
   "above_ma200": true,
   "above_ma50": false,
-  "ma50_declining": false,
-  "exit_signal": false,
+  "ma50_declining": true,
+  "exit_signal": true,
   "entry_allowed": true,
-  "updated": "2026-07-22T21:50:45+09:00"
+  "updated": "2026-07-23T15:37:01+09:00"
  },
  "holdings": [
   {
@@ -21,19 +21,19 @@
    "entry_price": 139500.0,
    "entry_confidence": 100,
    "init_stop_pct": -10.0,
-   "last_price": 141700.0,
-   "peak_price": 146700.0,
-   "return_pct": 1.58,
-   "total_return_pct": 1.58,
+   "last_price": 149800.0,
+   "peak_price": 149800.0,
+   "return_pct": 7.38,
+   "total_return_pct": 7.38,
    "qty_frac": 1.0,
    "realized_pct": 0.0,
    "partials": [],
    "tp_3r_done": false,
    "was_extended": false,
-   "days_held": 9,
+   "days_held": 10,
    "stage_now": 1,
-   "confidence_now": 75,
-   "last_updated": "2026-07-22",
+   "confidence_now": 80,
+   "last_updated": "2026-07-23",
    "signals_at_entry": [
     "MTT 통과",
     "RS 87 — 상위 강세",
@@ -52,10 +52,10 @@
    "last_price": 55000.0,
    "peak_price": 56500.0,
    "return_pct": 1.66,
-   "days_held": 17,
+   "days_held": 18,
    "stage_now": null,
    "confidence_now": 0,
-   "last_updated": "2026-07-22",
+   "last_updated": "2026-07-23",
    "signals_at_entry": [
     "MTT 통과",
     "RS 93 — 최상위 강세",
@@ -78,19 +78,19 @@
    "entry_price": 131600.0,
    "entry_confidence": 88,
    "init_stop_pct": -5.6,
-   "last_price": 141700.0,
-   "peak_price": 146700.0,
-   "return_pct": 7.67,
-   "total_return_pct": 7.67,
+   "last_price": 149800.0,
+   "peak_price": 149800.0,
+   "return_pct": 13.83,
+   "total_return_pct": 13.83,
    "qty_frac": 1.0,
    "realized_pct": 0.0,
    "partials": [],
    "tp_3r_done": false,
    "was_extended": false,
-   "days_held": 14,
+   "days_held": 15,
    "stage_now": 1,
-   "confidence_now": 75,
-   "last_updated": "2026-07-22",
+   "confidence_now": 80,
+   "last_updated": "2026-07-23",
    "signals_at_entry": [
     "웨지 팝: 10·20 EMA 동시 탈환, 거래량 2.02x",
     "10-20 EMA 압착 (변동성 수축)",
@@ -689,6 +689,10 @@
    {
     "date": "2026-07-22",
     "cum": -7.06
+   },
+   {
+    "date": "2026-07-23",
+    "cum": -5.9
    }
   ],
   "1": [
@@ -739,6 +743,10 @@
    {
     "date": "2026-07-22",
     "cum": -8.25
+   },
+   {
+    "date": "2026-07-23",
+    "cum": -7.87
    }
   ]
  },
@@ -803,6 +811,10 @@
    {
     "date": "2026-07-22",
     "nav": 776.76
+   },
+   {
+    "date": "2026-07-23",
+    "nav": 821.16
    }
   ],
   "1": [
@@ -865,6 +877,10 @@
    {
     "date": "2026-07-22",
     "nav": 699.79
+   },
+   {
+    "date": "2026-07-23",
+    "nav": 739.79
    }
   ]
  },
@@ -872,7 +888,7 @@
  "stats": {
   "holding_count": 3,
   "exited_count": 18,
-  "avg_return": 3.64,
+  "avg_return": 7.62,
   "win_rate": 0.0
  }
 }
