@@ -1,44 +1,44 @@
 {
- "updated": "2026-07-23T00:23:17+09:00",
+ "updated": "2026-07-23T10:09:56+09:00",
  "source": "https://docs.google.com/spreadsheets/d/1dpKl_YP9eAquU-G0Et9tcpyzw1YlziKvwoJzH4OsHfw",
  "kpi": {
-  "portfolio_value": 138558259.0,
+  "portfolio_value": 140033059.0,
   "cash": 107227296.0,
-  "eval_pnl": -3346999.8,
-  "eval_pnl_pct": -9.61,
-  "cum_pnl": -11441741.0,
-  "cum_pnl_pct": -7.63,
+  "eval_pnl": -1872199.8,
+  "eval_pnl_pct": -5.38,
+  "cum_pnl": -9966941.0,
+  "cum_pnl_pct": -6.64,
   "day_change": null,
   "day_change_pct": null,
   "realized_pnl": 7956504.0,
-  "nav_index": 923.72,
+  "nav_index": 933.55,
   "n_stocks": 3.0,
   "n_win": 3.0,
   "n_loss": 0.0,
   "indices": {
    "kospi": {
-    "value": 6797.7,
-    "change": 49.8
+    "value": 7050.5,
+    "change": 252.8
    },
    "kosdaq": {
-    "value": 751.1,
-    "change": 2.3
+    "value": 776.8,
+    "change": 25.7
    },
    "dow": {
-    "value": 52332.2,
-    "change": 107.6
+    "value": 52218.6,
+    "change": -6.1
    },
    "nasdaq": {
-    "value": 25812.1,
-    "change": -25.2
+    "value": 25690.9,
+    "change": -146.3
    },
    "sp500": {
-    "value": 7514.8,
-    "change": 5.6
+    "value": 7499.0,
+    "change": -10.2
    },
    "usdkrw": {
-    "value": 1477.0,
-    "change": 5.8
+    "value": 1471.9,
+    "change": 7.2
    }
   }
  },
@@ -48,13 +48,13 @@
    "code": "483650",
    "name": "달바글로벌",
    "qty": 43.0,
-   "price": 222000.0,
-   "change_pct": -5.93,
+   "price": 236000.0,
+   "change_pct": 6.31,
    "avg_price": 223849.0,
-   "eval_pnl": -79500.0,
-   "return_pct": -0.83,
-   "contrib_pct": -0.08,
-   "eval_amount": 9546000.0,
+   "eval_pnl": 522500.0,
+   "return_pct": 5.43,
+   "contrib_pct": 0.52,
+   "eval_amount": 10148000.0,
    "buy_amount": 9625500.0,
    "target_price": null,
    "buy_date": "2026-07-01",
@@ -67,13 +67,13 @@
    "code": "000660",
    "name": "SK하이닉스",
    "qty": 10.0,
-   "price": 1830000.0,
-   "change_pct": -0.33,
+   "price": 1924000.0,
+   "change_pct": 5.14,
    "avg_price": 2025000.0,
-   "eval_pnl": -1950000.0,
-   "return_pct": -9.63,
-   "contrib_pct": -1.95,
-   "eval_amount": 18300000.0,
+   "eval_pnl": -1010000.0,
+   "return_pct": -4.99,
+   "contrib_pct": -1.01,
+   "eval_amount": 19240000.0,
    "buy_amount": 20250000.0,
    "target_price": null,
    "buy_date": "2026-07-08",
@@ -86,13 +86,13 @@
    "code": "356860",
    "name": "티엘비",
    "qty": 112.0,
-   "price": 32350.0,
-   "change_pct": -3.43,
+   "price": 31750.0,
+   "change_pct": -1.85,
    "avg_price": 44113.0,
-   "eval_pnl": -1317500.0,
-   "return_pct": -26.67,
-   "contrib_pct": -1.32,
-   "eval_amount": 3623200.0,
+   "eval_pnl": -1384700.0,
+   "return_pct": -28.03,
+   "contrib_pct": -1.38,
+   "eval_amount": 3556000.0,
    "buy_amount": 4940700.0,
    "target_price": null,
    "buy_date": "2026-07-15",
@@ -127,10 +127,10 @@
    "subclass": "HBM",
    "name": "SK하이닉스",
    "price": 1830000.0,
-   "change_pct": -0.33,
+   "change_pct": 0.0,
    "target_price": null,
    "upside_pct": -100.0,
-   "mktcap": "13,042,452억",
+   "mktcap": "9,657억",
    "per": "17.3x",
    "eps": "105,627원",
    "high52": 2987000.0,
@@ -163,10 +163,10 @@
    "subclass": "지주",
    "name": "SK스퀘어",
    "price": 1230000.0,
-   "change_pct": -1.84,
+   "change_pct": 0.0,
    "target_price": null,
    "upside_pct": -100.0,
-   "mktcap": "1,623,087억",
+   "mktcap": "1,623,088억",
    "per": "10.4x",
    "eps": "117,817원",
    "high52": 2189000.0,
@@ -181,7 +181,7 @@
    "subclass": "백화점",
    "name": "신세계",
    "price": 547000.0,
-   "change_pct": -2.67,
+   "change_pct": 0.0,
    "target_price": 680000.0,
    "upside_pct": 24.31,
    "mktcap": "51,665억",
@@ -199,7 +199,7 @@
    "subclass": "기획사",
    "name": "하이브",
    "price": 199600.0,
-   "change_pct": 0.6,
+   "change_pct": 0.0,
    "target_price": null,
    "upside_pct": -100.0,
    "mktcap": "86,032억",
@@ -235,7 +235,7 @@
    "subclass": "ADC",
    "name": "리가켐바이오",
    "price": 93900.0,
-   "change_pct": 0.32,
+   "change_pct": 0.0,
    "target_price": null,
    "upside_pct": -100.0,
    "mktcap": "34,761억",
@@ -633,9 +633,9 @@
   "value": [
    {
     "date": "2026-7-23",
-    "portfolio_value": 138558259.0,
-    "total_value": 31469200.0,
-    "eval_pnl": -3346999.8
+    "portfolio_value": 140033059.0,
+    "total_value": 32944000.0,
+    "eval_pnl": -1872199.8
    },
    {
     "date": "2026-7-21",
