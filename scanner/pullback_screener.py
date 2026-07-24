@@ -60,6 +60,8 @@ ROOT = Path(__file__).parent.parent
 OUT_PATH = ROOT / "docs" / "data" / "pullback.json"
 STATE_PATH = ROOT / "docs" / "data" / "pullback_state.json"      # {code: first_seen}
 HISTORY_PATH = ROOT / "docs" / "data" / "pullback_history.json"  # append-only 편입/편출
+PERF_PATH = ROOT / "docs" / "data" / "pullback_perf.json"        # 편입 시그널 90일 성과 에피소드
+PERF_HOLD_TD = 90                                                # 보유 시뮬 거래일 (사양 B90 룰)
 SCAN_PATH = ROOT / "docs" / "data" / "scan.json"
 
 # ── 기준 (사양서 §3~4 — 완화하려면 여기만 수정) ──
@@ -252,6 +254,73 @@ def _score(rec: dict) -> tuple[int, dict]:
     return sum(b.values()), b
 
 
+def _update_perf(cands: list[dict], today: str, dates: list[str],
+                 closes: dict[str, float], removed_codes: set) -> dict:
+    """편입 시그널의 90거래일 보유 시뮬 (사양 §6.2 B90 룰 사후 검증).
+
+    에피소드 = (종목, 편입일). 편입일 종가를 기준가로, 매일 전종목 스냅샷 종가로
+    수익률을 갱신하다 90거래일 도달 시 확정(closed) — 추가 API 호출 없음.
+    주의: 사양은 '다음 영업일 시초가 진입'이지만 여기선 편입일 종가 근사.
+    """
+    try:
+        perf = json.loads(PERF_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        perf = {"episodes": []}
+    eps = perf["episodes"]
+    by_key = {(e["code"], e["entry_date"]): e for e in eps}
+    d_idx = {d: i for i, d in enumerate(dates)}          # YYYYMMDD → 위치
+    i_today = d_idx.get(today.replace("-", ""))
+
+    # 1) 신규 에피소드 개설 (해당 편입 건이 없을 때만)
+    for r in cands:
+        key = (r["ticker"], r["first_seen"])
+        if key not in by_key:
+            e = {"code": r["ticker"], "name": r["name"], "entry_date": r["first_seen"],
+                 "entry_price": r["current_price"], "entry_score": r["pullback_score"],
+                 "status": "open"}
+            if r["first_seen"] != today:                 # 과거 편입 복원 불가 — 현재가 근사
+                e["approx"] = 1
+            eps.append(e)
+            by_key[key] = e
+
+    # 2) 열린 에피소드 갱신 (편출돼도 90거래일까지 계속 추적 — 룰 검증이 목적)
+    for e in eps:
+        if e.get("status") != "open":
+            continue
+        if e["code"] in removed_codes and "removed_date" not in e:
+            e["removed_date"] = today
+        c = closes.get(e["code"])
+        i_ent = d_idx.get(e["entry_date"].replace("-", ""))
+        if c is None or i_ent is None or i_today is None or not e.get("entry_price"):
+            continue
+        td = i_today - i_ent
+        e["last_close"] = c
+        e["trading_days"] = td
+        e["ret_pct"] = round((c / e["entry_price"] - 1) * 100, 1)
+        if td >= PERF_HOLD_TD:
+            e["status"] = "closed"
+            e["ret_90"] = e["ret_pct"]
+            e["closed_date"] = today
+
+    eps[:] = eps[-300:]                                  # 안전 상한
+    closed = [e for e in eps if e.get("status") == "closed" and e.get("ret_90") is not None]
+    open_ = [e for e in eps if e.get("status") == "open" and e.get("ret_pct") is not None]
+    summary = {
+        "hold_td": PERF_HOLD_TD,
+        "closed_n": len(closed),
+        "closed_win_rate": round(sum(1 for e in closed if e["ret_90"] > 0) / len(closed) * 100, 1) if closed else None,
+        "closed_avg_ret": round(sum(e["ret_90"] for e in closed) / len(closed), 1) if closed else None,
+        "open_n": len(open_),
+        "open_avg_ret": round(sum(e["ret_pct"] for e in open_) / len(open_), 1) if open_ else None,
+        "note": "편입일 종가 진입 근사 · 90거래일 보유(B90) 시뮬 · 거래비용 미반영",
+    }
+    perf["summary"] = summary
+    perf["updated"] = today
+    PERF_PATH.write_text(json.dumps(perf, ensure_ascii=False, indent=1), encoding="utf-8")
+    recent = sorted(eps, key=lambda e: e["entry_date"], reverse=True)[:30]
+    return {"summary": summary, "episodes": recent}
+
+
 def _update_history(cands: list[dict], prev_state: dict, today: str) -> list:
     """편입/편출 이력 누적 (append-only, quality_growth 패턴).
     편출 기록에는 당시 score·가격·체류일을 남겨 사후 성과 추적(90일 보유 룰 운영)에 쓴다."""
@@ -304,7 +373,7 @@ def build() -> dict | None:
     logger.info("기준일 %s (-60:%s -120:%s -252:%s)",
                 d0, dates[idxs[1]], dates[idxs[2]], dates[idxs[3]])
 
-    market_of, w_return, pcts, caps = {}, {}, {}, {}
+    market_of, w_return, pcts, caps, all_closes = {}, {}, {}, {}, {}
     for mkt in ("KOSPI", "KOSDAQ"):
         snaps = []
         for j, ix in enumerate(idxs):
@@ -314,6 +383,7 @@ def build() -> dict | None:
                 caps.update(cp)
             time.sleep(PYKRX_SLEEP)
         cur = snaps[0]
+        all_closes.update(cur)
         wr = {}
         for code, c in cur.items():
             p60, p120, p252 = (s.get(code) for s in snaps[1:])
@@ -434,12 +504,15 @@ def build() -> dict | None:
         except Exception:
             r["days_in_list"] = 0
     history = _update_history(out, state, today)
+    removed_codes = set(state) - {r["ticker"] for r in out}
+    perf = _update_perf(out, today, dates, all_closes, removed_codes)
 
     return {
         "updated": dt.datetime.now(tz=KST).strftime("%Y-%m-%d %H:%M"),
         "snap_date": today,
         "_state": {r["ticker"]: r["first_seen"] for r in out},
         "history": history,
+        "perf": perf,
         "market": market_direction(),
         "thresholds": {
             "pct_6m_min": PCT_6M_MIN, "pct_12m_min": PCT_12M_MIN,
