@@ -12,5 +12,19 @@
     "last_price": 506000.0
    }
   ]
+ },
+ {
+  "date": "2026-07-24",
+  "added": [],
+  "removed": [
+   {
+    "code": "010060",
+    "name": "OCI홀딩스",
+    "first_seen": "2026-07-24",
+    "days": 0,
+    "last_score": 5,
+    "last_price": 253500.0
+   }
+  ]
  }
 ]
