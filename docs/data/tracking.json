@@ -1,5 +1,5 @@
 {
- "updated": "2026-07-24T15:09:02+09:00",
+ "updated": "2026-07-24T15:36:44+09:00",
  "kospi": {
   "price": 6728.97,
   "ma200": 5667.1,
@@ -9,7 +9,7 @@
   "ma50_declining": true,
   "exit_signal": true,
   "entry_allowed": true,
-  "updated": "2026-07-24T15:09:02+09:00"
+  "updated": "2026-07-24T15:36:44+09:00"
  },
  "holdings": [
   {
@@ -21,10 +21,10 @@
    "entry_price": 139500.0,
    "entry_confidence": 100,
    "init_stop_pct": -10.0,
-   "last_price": 150500.0,
-   "peak_price": 149800.0,
-   "return_pct": 7.89,
-   "total_return_pct": 7.89,
+   "last_price": 151200.0,
+   "peak_price": 151200.0,
+   "return_pct": 8.39,
+   "total_return_pct": 8.39,
    "qty_frac": 1.0,
    "realized_pct": 0.0,
    "partials": [],
@@ -33,7 +33,7 @@
    "days_held": 11,
    "stage_now": 1,
    "confidence_now": 80,
-   "last_updated": "2026-07-23",
+   "last_updated": "2026-07-24",
    "signals_at_entry": [
     "MTT 통과",
     "RS 87 — 상위 강세",
@@ -55,7 +55,7 @@
    "days_held": 19,
    "stage_now": null,
    "confidence_now": 0,
-   "last_updated": "2026-07-23",
+   "last_updated": "2026-07-24",
    "signals_at_entry": [
     "MTT 통과",
     "RS 93 — 최상위 강세",
@@ -78,10 +78,10 @@
    "entry_price": 131600.0,
    "entry_confidence": 88,
    "init_stop_pct": -5.6,
-   "last_price": 150500.0,
-   "peak_price": 149800.0,
-   "return_pct": 14.36,
-   "total_return_pct": 14.36,
+   "last_price": 151200.0,
+   "peak_price": 151200.0,
+   "return_pct": 14.89,
+   "total_return_pct": 14.89,
    "qty_frac": 1.0,
    "realized_pct": 0.0,
    "partials": [],
@@ -90,7 +90,7 @@
    "days_held": 16,
    "stage_now": 1,
    "confidence_now": 80,
-   "last_updated": "2026-07-23",
+   "last_updated": "2026-07-24",
    "signals_at_entry": [
     "웨지 팝: 10·20 EMA 동시 탈환, 거래량 2.02x",
     "10-20 EMA 압착 (변동성 수축)",
@@ -696,7 +696,7 @@
    },
    {
     "date": "2026-07-24",
-    "cum": -5.8
+    "cum": -5.7
    }
   ],
   "1": [
@@ -754,7 +754,7 @@
    },
    {
     "date": "2026-07-24",
-    "cum": -7.83
+    "cum": -7.8
    }
   ]
  },
@@ -826,7 +826,7 @@
    },
    {
     "date": "2026-07-24",
-    "nav": 825.0
+    "nav": 828.83
    }
   ],
   "1": [
@@ -896,7 +896,7 @@
    },
    {
     "date": "2026-07-24",
-    "nav": 743.25
+    "nav": 746.71
    }
   ]
  },
@@ -904,7 +904,7 @@
  "stats": {
   "holding_count": 3,
   "exited_count": 18,
-  "avg_return": 7.97,
+  "avg_return": 8.31,
   "win_rate": 0.0
  }
 }
