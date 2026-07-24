@@ -553,6 +553,34 @@ def _update_ledger(ledger: dict, results: list[dict], kospi: dict, params: dict)
     return {"holdings": new_holdings, "exited": exited}
 
 
+def _refresh_ledger_view(ledger: dict, results: list[dict]) -> dict:
+    """장중 표시용 원장 뷰 — 편입/이탈/부분익절 확정 없이 보유종목의
+    현재가·수익률만 최신 스캔 시세로 갱신한 사본을 돌려준다.
+    state.json의 원장 원본(peak_price·qty_frac 등 확정 상태)은 건드리지 않는다."""
+    today = dt.date.today()
+    scan_map = {r["ticker"]: r for r in results if r.get("ticker")}
+    holdings = []
+    for h in ledger.get("holdings", []):
+        h2 = dict(h)
+        r = scan_map.get(h2.get("ticker"))
+        price = float(r["current_price"]) if r and r.get("current_price") else h2.get("last_price", h2.get("entry_price"))
+        entry_price = float(h2.get("entry_price") or 0)
+        ret_pct = (price / entry_price - 1) * 100 if entry_price else 0.0
+        qty_frac = float(h2.get("qty_frac", 1.0))
+        realized = float(h2.get("realized_pct", 0.0))
+        h2.update({
+            "last_price": round(price, 0),
+            "return_pct": round(ret_pct, 2),
+            "total_return_pct": round(realized + qty_frac * ret_pct, 2),
+            "stage_now": r.get("stage") if r else h2.get("stage_now"),
+            "confidence_now": r.get("confidence", 0) if r else h2.get("confidence_now", 0),
+        })
+        if h2.get("entry_date"):
+            h2["days_held"] = (today - dt.date.fromisoformat(h2["entry_date"])).days
+        holdings.append(h2)
+    return {"holdings": holdings, "exited": ledger.get("exited", [])}
+
+
 # ── 트랙별 누적 수익률 히스토리 (전략 포트폴리오 차트) ─────────
 # 트레이드당 동일 비중(1단위) 가정, 수익률(%p) 단순 합산.
 #   - 최초 실행: 현존 이탈 기록으로 과거 실현 누적 곡선을 백필 (당시 보유 평가손익은 소급 불가)
@@ -737,7 +765,8 @@ def _calc_fair_value(eps, bps, roe_pct, ke: float = 9.0, roe_cap: float = 25.0):
 
 async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
     """value_universe.json 종목의 현재가·52주·상승여력·안전마진·저평가 워치를
-    장마감 시점 시세로 계산해 value_price.json에 저장 (프론트가 value.json과 병합)."""
+    계산해 value_price.json에 저장 (프론트가 value.json과 병합).
+    장중엔 실시간가, 마감 후엔 종가 기준 — 거래일이면 매 스캔 갱신."""
     vpath = ROOT / "value_universe.json"
     if not vpath.exists():
         return
@@ -802,6 +831,17 @@ async def _build_value_price(ohlcv_map: dict, realtime: dict) -> None:
                 roe_map[r["code"]] = float(roe)
     except Exception:
         pass
+
+    # 장중이면 가치 유니버스 종목의 실시간가 보완 조회 (realtime은 스캔 대상만 담고 있음)
+    if is_market_hours():
+        missing_rt = [c for c in meta if c not in realtime]
+        if missing_rt:
+            try:
+                from data_provider import load_config as _load_cfg2
+                extra = await fetch_realtime_prices_batch(_load_cfg2(), missing_rt)
+                realtime = {**realtime, **{k: v for k, v in extra.items() if v}}
+            except Exception as e:
+                logger.warning("가치 유니버스 실시간가 보완 실패(무시, 종가 사용): %s", e)
 
     items: dict = {}
     for code, m in meta.items():
@@ -1026,16 +1066,26 @@ async def main():
     # 스트래들 가드: 장중에 시작해 가상 캔들(실시간 중간가)을 붙인 실행이
     # 지연되어 15:30을 넘겨 끝나면, 비종가 데이터로 이탈·부분익절이 확정되는 것을 막는다.
     now = dt.datetime.now(tz=KST)
-    is_close_run = (now.hour, now.minute) >= (15, 30) and _is_trading_day_today() and not realtime
+    trading_day = _is_trading_day_today()
+    is_close_run = (now.hour, now.minute) >= (15, 30) and trading_day and not realtime
     ledger = state.get("ledger", {"holdings": [], "exited": []})
     if is_close_run:
         ledger = _update_ledger(ledger, results, kospi, params)
         state["ledger"] = ledger
+        ledger_view = ledger
         _update_track_history(state, ledger)
         _update_track_nav(state, ledger, ohlcv_map)  # 기준가(7/1=1000) 곡선
-        logger.info("장마감 이후 실행 — 전략 포트폴리오 갱신")
+        logger.info("장마감 이후 실행 — 전략 포트폴리오 갱신(확정)")
+    elif trading_day:
+        # 장중: 편입/이탈/부분익절 확정 없이 표시 데이터만 갱신해 tracking.json에 반영.
+        # 성과곡선·NAV의 오늘 점은 잠정치 — 같은 날 마감 실행이 종가 기준으로 덮어쓴다(멱등).
+        ledger_view = _refresh_ledger_view(ledger, results)
+        _update_track_history(state, ledger_view)
+        _update_track_nav(state, ledger_view, ohlcv_map)
+        logger.info("장중 실행 — 원장 확정 없음, 표시 데이터(시세·성과곡선)만 갱신")
     else:
-        logger.info("장중 실행 — 전략 포트폴리오는 직전 마감 상태 유지 (감지기만 갱신)")
+        ledger_view = ledger
+        logger.info("휴장일 실행 — 전략 포트폴리오는 직전 마감 상태 유지")
 
     # RS 히스토리 스냅샷 (스캔 대상만, 최대 8개)
     snap_rs = {t: round(rs_map.get(t, 0)) for t, _ in scan_targets if t in rs_map}
@@ -1055,28 +1105,28 @@ async def main():
         "sector_etf_rs": sector_etf_rs,
         "results": results,
     })
-    # 전략 포트폴리오는 장마감 실행에서만 tracking.json을 새로 쓴다.
-    # 장중 실행은 기존 tracking.json(직전 마감본)을 건드리지 않아 하루 1회만 변경된다.
-    if is_close_run:
+    # tracking.json은 거래일이면 매 스캔 갱신 — 장중엔 표시용 뷰(ledger_view), 마감엔 확정 원장.
+    # 휴장일 실행은 건드리지 않는다 (전일 종가로 잘못 덮어쓰는 것 방지).
+    if trading_day:
         _save_json(TRACKING_PATH, {
             "updated": now_str,
             "kospi": kospi,
-            "holdings": ledger["holdings"],
-            "exited": ledger["exited"],
+            "holdings": ledger_view["holdings"],
+            "exited": ledger_view["exited"],
             "track_history": state.get("track_history", {}),
             "track_nav": state.get("track_nav", {}),
             "nav_base": TRACK_NAV_BASE,
             "stats": {
-                "holding_count": len(ledger["holdings"]),
-                "exited_count": len(ledger["exited"]),
-                "avg_return": round(sum(h.get("total_return_pct", h["return_pct"]) for h in ledger["holdings"]) / len(ledger["holdings"]), 2) if ledger["holdings"] else 0,
-                "win_rate": round(sum(1 for e in ledger["exited"] if e.get("return_pct", 0) > 0) / len(ledger["exited"]) * 100, 1) if ledger["exited"] else 0,
+                "holding_count": len(ledger_view["holdings"]),
+                "exited_count": len(ledger_view["exited"]),
+                "avg_return": round(sum(h.get("total_return_pct", h["return_pct"]) for h in ledger_view["holdings"]) / len(ledger_view["holdings"]), 2) if ledger_view["holdings"] else 0,
+                "win_rate": round(sum(1 for e in ledger_view["exited"] if e.get("return_pct", 0) > 0) / len(ledger_view["exited"]) * 100, 1) if ledger_view["exited"] else 0,
             },
         })
     _save_json(STATE_PATH, state)
 
-    # 가치투자 시세/저평가 워치 — 장마감 실행에서만 (매일 1회, 전략 포트폴리오와 동일 캐이던스)
-    if is_close_run:
+    # 가치투자 시세/저평가 워치 — 거래일이면 매 스캔 갱신 (장중엔 실시간가 반영)
+    if trading_day:
         try:
             await _build_value_price(ohlcv_map, realtime)
         except Exception as e:
