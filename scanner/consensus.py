@@ -92,28 +92,39 @@ def _parse_consensus_multi(html: str) -> list[dict]:
     return out
 
 
-def fetch_consensus_multi(code: str) -> list[dict]:
+def fetch_consensus_multi(code: str, retries: int = 3) -> list[dict]:
     """종목코드 → 다개년 컨센서스 EPS 리스트. 실패·미제공 시 [] (fail-closed).
 
     encparam(페이지 토큰) 확보용 본문 1회 + ajax 1회 = 종목당 2요청.
+    일시 장애(네트워크 예외·차단 페이지·빈 응답)는 재시도, 정상 응답에 (E) 컬럼이
+    없는 경우(컨센서스 미제공 종목)는 재시도 없이 [] — CI에서 간헐 SSL/차단으로
+    per_accel 가점이 스캔마다 흔들리는 것을 방지.
     """
-    try:
-        req = urllib.request.Request(_URL.format(code=code), headers={"User-Agent": _UA})
-        with urllib.request.urlopen(req, timeout=12) as r:
-            main = r.read().decode("utf-8", errors="replace")
-        m = re.search(r"encparam\s*[:=]\s*['\"]([^'\"]+)", main)
-        if not m:
-            return []
-        req = urllib.request.Request(
-            _AJAX.format(code=code, enc=m.group(1)),
-            headers={"User-Agent": _UA, "Referer": _URL.format(code=code),
-                     "X-Requested-With": "XMLHttpRequest"})
-        with urllib.request.urlopen(req, timeout=12) as r:
-            html = r.read().decode("utf-8", errors="replace")
-        return _parse_consensus_multi(html)
-    except Exception as e:
-        logger.warning("다개년 컨센서스 조회 실패 %s: %s", code, e)
-        return []
+    import time as _time
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(_URL.format(code=code), headers={"User-Agent": _UA})
+            with urllib.request.urlopen(req, timeout=12) as r:
+                main = r.read().decode("utf-8", errors="replace")
+            m = re.search(r"encparam\s*[:=]\s*['\"]([^'\"]+)", main)
+            if not m:                      # 차단/오류 페이지 추정 — 재시도
+                raise RuntimeError("encparam 없음 (차단 페이지 의심)")
+            req = urllib.request.Request(
+                _AJAX.format(code=code, enc=m.group(1)),
+                headers={"User-Agent": _UA, "Referer": _URL.format(code=code),
+                         "X-Requested-With": "XMLHttpRequest"})
+            with urllib.request.urlopen(req, timeout=12) as r:
+                html = r.read().decode("utf-8", errors="replace")
+            if len(html) < 1000:           # 빈/오류 응답 — 재시도
+                raise RuntimeError(f"ajax 응답 비정상 ({len(html)}B)")
+            return _parse_consensus_multi(html)   # 정상 응답에 (E) 없음 = 미제공 → []
+        except Exception as e:
+            if attempt + 1 < retries:
+                logger.info("다개년 컨센서스 재시도 %s (%d/%d): %s", code, attempt + 1, retries, e)
+                _time.sleep(1.5 * (attempt + 1))
+            else:
+                logger.warning("다개년 컨센서스 조회 실패 %s: %s", code, e)
+    return []
 
 
 def fetch_consensus(code: str) -> dict:
