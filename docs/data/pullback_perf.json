@@ -7,9 +7,9 @@
    "entry_price": 624000.0,
    "entry_score": 7,
    "status": "open",
-   "last_close": 632000.0,
+   "last_close": 630000.0,
    "trading_days": 0,
-   "ret_pct": 1.3
+   "ret_pct": 1.0
   },
   {
    "code": "053610",
@@ -18,9 +18,9 @@
    "entry_price": 63200.0,
    "entry_score": 7,
    "status": "open",
-   "last_close": 64000.0,
+   "last_close": 63400.0,
    "trading_days": 0,
-   "ret_pct": 1.3
+   "ret_pct": 0.3
   },
   {
    "code": "319660",
@@ -29,9 +29,9 @@
    "entry_price": 143700.0,
    "entry_score": 6,
    "status": "open",
-   "last_close": 144400.0,
+   "last_close": 143900.0,
    "trading_days": 0,
-   "ret_pct": 0.5
+   "ret_pct": 0.1
   },
   {
    "code": "005930",
@@ -40,9 +40,9 @@
    "entry_price": 249500.0,
    "entry_score": 6,
    "status": "open",
-   "last_close": 251250.0,
+   "last_close": 249500.0,
    "trading_days": 0,
-   "ret_pct": 0.7
+   "ret_pct": 0.0
   },
   {
    "code": "017670",
@@ -51,9 +51,9 @@
    "entry_price": 100200.0,
    "entry_score": 6,
    "status": "open",
-   "last_close": 103800.0,
+   "last_close": 100000.0,
    "trading_days": 0,
-   "ret_pct": 3.6
+   "ret_pct": -0.2
   },
   {
    "code": "041830",
@@ -73,9 +73,9 @@
    "entry_price": 13370.0,
    "entry_score": 6,
    "status": "open",
-   "last_close": 13420.0,
+   "last_close": 13580.0,
    "trading_days": 0,
-   "ret_pct": 0.4
+   "ret_pct": 1.6
   },
   {
    "code": "127120",
@@ -84,9 +84,9 @@
    "entry_price": 32650.0,
    "entry_score": 6,
    "status": "open",
-   "last_close": 32750.0,
+   "last_close": 32850.0,
    "trading_days": 0,
-   "ret_pct": 0.3
+   "ret_pct": 0.6
   },
   {
    "code": "322000",
@@ -95,9 +95,9 @@
    "entry_price": 165900.0,
    "entry_score": 5,
    "status": "open",
-   "last_close": 172400.0,
+   "last_close": 164000.0,
    "trading_days": 0,
-   "ret_pct": 3.9
+   "ret_pct": -1.1
   },
   {
    "code": "131290",
@@ -106,9 +106,9 @@
    "entry_price": 202000.0,
    "entry_score": 5,
    "status": "open",
-   "last_close": 203500.0,
+   "last_close": 202500.0,
    "trading_days": 0,
-   "ret_pct": 0.7
+   "ret_pct": 0.2
   },
   {
    "code": "005090",
@@ -117,9 +117,9 @@
    "entry_price": 49750.0,
    "entry_score": 5,
    "status": "open",
-   "last_close": 50500.0,
+   "last_close": 49300.0,
    "trading_days": 0,
-   "ret_pct": 1.5
+   "ret_pct": -0.9
   },
   {
    "code": "028050",
@@ -128,9 +128,9 @@
    "entry_price": 47250.0,
    "entry_score": 5,
    "status": "open",
-   "last_close": 47700.0,
+   "last_close": 47600.0,
    "trading_days": 0,
-   "ret_pct": 1.0
+   "ret_pct": 0.7
   },
   {
    "code": "006340",
@@ -139,9 +139,9 @@
    "entry_price": 13730.0,
    "entry_score": 4,
    "status": "open",
-   "last_close": 13930.0,
+   "last_close": 13730.0,
    "trading_days": 0,
-   "ret_pct": 1.5
+   "ret_pct": 0.0
   },
   {
    "code": "019210",
@@ -150,9 +150,9 @@
    "entry_price": 18450.0,
    "entry_score": 4,
    "status": "open",
-   "last_close": 18530.0,
+   "last_close": 18390.0,
    "trading_days": 0,
-   "ret_pct": 0.4
+   "ret_pct": -0.3
   }
  ],
  "summary": {
@@ -161,7 +161,7 @@
   "closed_win_rate": null,
   "closed_avg_ret": null,
   "open_n": 14,
-  "open_avg_ret": 1.2,
+  "open_avg_ret": 0.1,
   "note": "편입일 종가 진입 근사 · 90거래일 보유(B90) 시뮬 · 거래비용 미반영"
  },
  "updated": "2026-07-24"
